@@ -222,3 +222,4 @@ Unique titles and descriptions per page, canonical URLs, Open Graph/Twitter card
 
 ### Performance
 Next.js image optimisation (AVIF/WebP, responsive sizes, lazy loading), self-hosted Google Fonts via `next/font`, cached catalogue reads, GA loaded after interaction/consent only, `prefers-reduced-motion` respected.
+# varam-main
