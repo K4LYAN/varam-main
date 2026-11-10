@@ -14,7 +14,7 @@ import { seedDatabase } from "./seed";
  */
 export type Db = {
   query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
-  kind: "postgres" | "pglite";
+  kind: "postgres" | "pglite" | "temporary";
 };
 
 type GlobalDb = { __varamDb?: Promise<Db> };
@@ -40,21 +40,24 @@ async function connect(): Promise<Db> {
     };
   }
 
-  if (process.env.VERCEL) {
-    throw new Error(
-      "DATABASE_URL is not configured. Add a PostgreSQL connection string in your hosting environment variables.",
-    );
-  }
-
   const { PGlite } = await import("@electric-sql/pglite");
   const path = await import("node:path");
   const fs = await import("node:fs/promises");
-  const dir = process.env.PGLITE_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "pglite");
+
+  // Serverless hosting without DATABASE_URL: fall back to a temporary embedded
+  // database in /tmp so the storefront still works. It is re-seeded on each
+  // cold start, so admin edits do NOT persist — connect PostgreSQL for that.
+  const serverless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (serverless) {
+    console.warn("[db] DATABASE_URL is not set — using a temporary database. Admin changes will not be saved permanently.");
+  }
+  const defaultDir = serverless ? "/tmp/varam-pglite" : path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "pglite");
+  const dir = process.env.PGLITE_DIR || defaultDir;
   await fs.mkdir(path.dirname(dir), { recursive: true });
   const pg = new PGlite(dir);
   await pg.waitReady;
   return {
-    kind: "pglite",
+    kind: serverless ? "temporary" : "pglite",
     async query<T>(text: string, params: unknown[] = []) {
       const res = await pg.query(text, params);
       return res.rows as T[];

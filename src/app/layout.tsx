@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "@/lib/config";
 import "./globals.css";
 
@@ -58,7 +59,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="min-h-dvh bg-ivory text-ink">{children}</body>
+      <body className="min-h-dvh bg-ivory text-ink">
+        {children}
+        {/* Vercel Web Analytics — cookieless page-view stats, only active when deployed on Vercel */}
+        <Analytics />
+      </body>
     </html>
   );
 }

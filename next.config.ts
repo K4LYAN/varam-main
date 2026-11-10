@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
   // PGlite (embedded Postgres used for local development) ships WASM assets
   // that must not be bundled.
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Ship PGlite's WASM/data files with serverless functions (used as a
+  // temporary database when DATABASE_URL is not configured).
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/@electric-sql/pglite/dist/**/*"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

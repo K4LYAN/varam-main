@@ -150,6 +150,7 @@ _This policy is a template. Please review it with your legal adviser and replace
 ### Information we collect
 - **Order enquiries via WhatsApp.** When you choose to send us an order on WhatsApp, the message and your WhatsApp contact details are handled by WhatsApp and received by our business account. We use them only to respond to your enquiry and fulfil your order.
 - **Shopping cart.** Your cart is stored only in your own browser (local storage). It is not sent to our servers.
+- **Site statistics.** Our hosting provider (Vercel) records anonymous, cookie-free page-view statistics. No personal data is collected.
 - **Maps.** Our store pages show an embedded Google Map, which is provided by Google and subject to Google's privacy policy.
 - **Analytics (only with your consent).** If you accept analytics cookies, we use Google Analytics 4 to understand how visitors use the site (pages viewed, products viewed, items added to cart, and clicks on WhatsApp buttons). We never send your name, phone number, address, email address or the contents of your WhatsApp message to Google Analytics.
 

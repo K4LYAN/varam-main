@@ -64,7 +64,7 @@ Secrets (`DATABASE_URL`, `ADMIN_PASSWORD_HASH`, `AUTH_SECRET`, `BLOB_READ_WRITE_
 ## 3. Deploying to Vercel
 
 1. Push this project to a Git repository and import it in Vercel.
-2. **Database:** create a PostgreSQL database (Vercel Marketplace → Neon, or Supabase). Copy the *pooled* connection string into `DATABASE_URL`. Tables are created and seeded automatically on first request.
+2. **Database:** without `DATABASE_URL` the site still runs on a *temporary* built-in database (your catalogue, reset on every cold start — admin edits are not kept). For a real store, create a PostgreSQL database (Vercel Marketplace → Neon, or Supabase). Copy the *pooled* connection string into `DATABASE_URL`. Tables are created and seeded automatically on first request.
 3. **Images:** Vercel → Storage → create a Blob store and connect it to the project (this adds `BLOB_READ_WRITE_TOKEN`).
 4. Add the remaining environment variables from the table above. Use separate values per environment — in particular a separate GA4 property/data stream for Preview deployments.
 5. Deploy, then add your custom domain (HTTPS is automatic) and set `NEXT_PUBLIC_SITE_URL` to it.
@@ -101,6 +101,12 @@ The ✦ button opens a **rule-based** assistant (`src/components/assistant/Assis
 The recommendation table (`USES`) and keyword list are easy to edit. Typed text and delivery locations are never sent to analytics; only the type of action (`assistant_open`, `assistant_action`, `assistant_requirements_sent`) is tracked.
 
 ---
+
+### Vercel Web Analytics
+`@vercel/analytics` is included in the root layout. Enable it in Vercel → your project → **Analytics** → Enable. It is cookie-free and runs alongside GA4 (GA4 still needs visitor consent).
+
+### Build log warnings on Vercel
+- `npm warn Unknown env config "cache-dir"` comes from Vercel's own build environment, not this project. It is harmless and can be ignored.
 
 ### Design system
 Colours come from the VARAM logo and are defined once in `src/app/globals.css`: `brand` (chocolate brown), `accent` (golden oil), `leaf` (leaf green), `ivory`/`cream` backgrounds. Change them there to re-theme the whole site.

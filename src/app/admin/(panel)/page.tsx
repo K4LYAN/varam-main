@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/data";
+import { getDb } from "@/lib/db";
 import { analyticsConfig, envWhatsAppNumber } from "@/lib/config";
 import { isWhatsAppNumberConfigured } from "@/lib/whatsapp";
 import { formatINR } from "@/lib/format";
@@ -16,11 +17,18 @@ export default async function DashboardPage() {
     db.settings(),
   ]);
   const number = settings.contact.whatsappNumber || envWhatsAppNumber;
+  const dbKind = (await getDb()).kind;
   const unavailable = products.filter((p) => !p.available);
   const usesPhotos = products.filter((p) => p.images.length).length;
   const placeholderImages = JSON.stringify(settings).includes("images.unsplash.com");
 
   const checks = [
+    {
+      ok: dbKind !== "temporary",
+      label: "Permanent database",
+      fix: "/admin",
+      hint: "No DATABASE_URL is set, so a temporary database is used and your admin changes reset after a while. Connect Postgres in Vercel → Storage.",
+    },
     { ok: isWhatsAppNumberConfigured(number), label: "WhatsApp business number", fix: "/admin/content", hint: "Customers' orders are sent to this number." },
     { ok: Boolean(analyticsConfig.measurementId), label: "Google Analytics 4 Measurement ID", fix: "/admin/analytics", hint: "Set NEXT_PUBLIC_GA_MEASUREMENT_ID in hosting environment variables." },
     { ok: Boolean(settings.contact.email || settings.contact.phone), label: "Contact details", fix: "/admin/content", hint: "Phone or email shown in the footer and contact page." },
