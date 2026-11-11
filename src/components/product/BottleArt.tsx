@@ -38,7 +38,7 @@ export function BottleArt({
   const deep = shade(safeTone, -0.38);
   const light = shade(safeTone, 0.22);
   // Ghee is shown in a wide jar, oils in a tall bottle
-  const jar = /ghee/i.test(name);
+  const jar = /ghee|honey/i.test(name);
   const bottle = jar
     ? "M58 150 Q44 150 44 168 L44 428 Q44 450 66 450 L174 450 Q196 450 196 428 L196 168 Q196 150 182 150 Z"
     : "M103 74 L103 112 C103 134 52 146 52 180 L52 430 Q52 450 72 450 L168 450 Q188 450 188 430 L188 180 C188 146 137 134 137 112 L137 74 Z";
@@ -138,7 +138,7 @@ export function BottleArt({
         fill="#6c675a"
         style={{ fontFamily: "var(--font-manrope), system-ui, sans-serif", fontWeight: 600 }}
       >
-        {jar ? "TRADITIONAL GHEE" : "COLD-PRESSED OIL"}
+        {/honey/i.test(name) ? "NATURAL HONEY" : jar ? "TRADITIONAL GHEE" : "COLD-PRESSED OIL"}
       </text>
       {size && (
         <text

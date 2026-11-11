@@ -50,7 +50,7 @@ const USES: { label: string; key: string; slugs: string[]; note: string }[] = [
   { label: "South Indian cooking", key: "south", slugs: ["cold-pressed-white-sesame-oil", "cold-pressed-groundnut-oil", "cold-pressed-coconut-oil"], note: "Sesame (gingelly), groundnut and coconut oil are the classic trio of South Indian kitchens." },
   { label: "North Indian & pickles", key: "north", slugs: ["cold-pressed-mustard-oil", "cold-pressed-white-sesame-oil"], note: "Mustard oil gives pickles and North & East Indian dishes their signature pungency. Sesame oil is a favourite for South Indian pickles." },
   { label: "Frying snacks", key: "frying", slugs: ["cold-pressed-groundnut-oil"], note: "Groundnut oil is the traditional choice for frying snacks at home." },
-  { label: "Sweets & festivals", key: "sweets", slugs: ["pure-ghee", "cold-pressed-coconut-oil"], note: "Ghee is a must for sweets, halwa and pooja; coconut oil is used in many traditional sweets too." },
+  { label: "Sweets & festivals", key: "sweets", slugs: ["pure-ghee", "pure-honey", "cold-pressed-coconut-oil"], note: "Ghee is a must for sweets, halwa and pooja; honey is lovely in desserts and drinks; coconut oil is used in many traditional sweets too." },
   { label: "Hair & skin care", key: "care", slugs: ["cold-pressed-coconut-oil", "cold-pressed-castor-oil", "cold-pressed-black-sesame-oil"], note: "Coconut, castor and black sesame oil are traditionally used in hair and skin care routines." },
 ];
 
@@ -332,6 +332,7 @@ export function Assistant({ products }: { products: Product[] }) {
       [["sunflower"], "cold-pressed-sunflower-oil"],
       [["castor", "amudham", "aamudam", "erandi", "vilakkennai"], "cold-pressed-castor-oil"],
       [["ghee", "neyyi", "nei", "ghi"], "pure-ghee"],
+      [["honey", "thene", "shahad", "madhu"], "pure-honey"],
     ];
     const ids: string[] = [];
     let rest = t;

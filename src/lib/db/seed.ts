@@ -16,9 +16,11 @@ const categories: SeedCategory[] = [
   { id: "cat-mustard", slug: "mustard-oil", name: "Mustard Oil", description: "Cold-pressed from mustard seeds." },
   { id: "cat-other", slug: "other-cold-pressed-oils", name: "Other Cold-Pressed Oils", description: "Sunflower and castor oil." },
   { id: "cat-ghee", slug: "ghee", name: "Ghee", description: "Traditional ghee." },
+  { id: "cat-honey", slug: "honey", name: "Honey", description: "Natural honey." },
 ];
 
 const litre = (price: number): Variant[] => [{ id: "1-litre", label: "1 Litre", price, available: true }];
+const kg = (price: number): Variant[] => [{ id: "1-kg", label: "1 Kg", price, available: true }];
 
 const STORAGE =
   "Store in a cool, dry place away from direct sunlight. Close the cap tightly after every use. Natural sedimentation may occur — this is normal for unrefined oils.";
@@ -77,7 +79,7 @@ const products: SeedProduct[] = [
     uses: "Pickles, podis, idli and dosa, kuzhambu, poriyal and traditional South Indian recipes.",
     specifications: specs("White sesame seeds"),
     oilTone: "#D6A13A",
-    variants: litre(500),
+    variants: litre(550),
     featured: true,
   },
   {
@@ -92,7 +94,7 @@ const products: SeedProduct[] = [
     uses: "Traditional recipes, tempering, pickles and finishing dishes. Also traditionally used for oil massage and hair care.",
     specifications: specs("Black sesame seeds"),
     oilTone: "#7B4B1F",
-    variants: litre(480),
+    variants: litre(520),
   },
   {
     slug: "cold-pressed-coconut-oil",
@@ -106,7 +108,7 @@ const products: SeedProduct[] = [
     uses: "Kerala-style cooking, avial, thoran, sweets and baking. Also traditionally used for hair and skin care.",
     specifications: specs("Coconut"),
     oilTone: "#EFE3BF",
-    variants: litre(600),
+    variants: litre(700),
     featured: true,
   },
   {
@@ -167,23 +169,35 @@ const products: SeedProduct[] = [
     oilTone: "#E9B949",
     variants: litre(800),
     featured: true,
+  },
+  {
+    slug: "pure-honey",
+    name: "Pure Honey",
+    categoryId: "cat-honey",
+    shortDescription: "Thick, golden natural honey for your kitchen.",
+    description: "Golden natural honey with a rich, floral sweetness — for breakfast, drinks and desserts.",
+    ingredients: "Honey.",
+    extraction: "Honey is filtered and packed in sealed jars.",
+    storage:
+      "Store at room temperature with the lid tightly closed and use a clean, dry spoon. Honey may crystallise naturally over time — stand the jar in warm water to make it runny again.",
+    uses: "Spreading on toast and dosa, stirring into warm water, tea or milk, and sweetening desserts, smoothies and dressings.",
+    specifications: specs("Honey", "Natural honey"),
+    oilTone: "#D88F14",
+    variants: kg(1000),
     isNew: true,
   },
 ];
 
-export async function seedDatabase(db: Db) {
-  const existing = await db.query<{ count: string | number }>("select count(*)::int as count from categories");
-  if (Number(existing[0]?.count ?? 0) > 0) return;
+async function insertCategory(db: Db, c: SeedCategory, i: number) {
+  await db.query(
+    `insert into categories (id, slug, name, description, sort_order) values ($1,$2,$3,$4,$5)
+     on conflict do nothing`,
+    [c.id, c.slug, c.name, c.description, i],
+  );
+}
 
-  for (const [i, c] of categories.entries()) {
-    await db.query(
-      `insert into categories (id, slug, name, description, sort_order) values ($1,$2,$3,$4,$5)
-       on conflict (id) do nothing`,
-      [c.id, c.slug, c.name, c.description, i],
-    );
-  }
-
-  for (const [i, p] of products.entries()) {
+async function insertProduct(db: Db, p: SeedProduct, i: number) {
+  {
     await db.query(
       `insert into products (id, slug, name, category_id, short_description, description, ingredients,
         extraction_process, storage, uses, specifications, images, variants, oil_tone, featured, is_new, available, sort_order)
@@ -210,6 +224,46 @@ export async function seedDatabase(db: Db) {
       ],
     );
   }
+}
+
+/**
+ * Catalogue updates for databases that were seeded earlier.
+ * Each version runs once (tracked in settings key "catalog_version").
+ *  v2 (Nov 2026): new price list — Coconut ₹700, White Sesame ₹550, Black Sesame ₹520 — and Pure Honey added.
+ */
+const CATALOG_VERSION = 2;
+
+async function syncCatalog(db: Db) {
+  const rows = await db.query<{ value: unknown }>("select value from settings where key = 'catalog_version'");
+  const current = Number(rows[0]?.value ?? 1);
+  if (current >= CATALOG_VERSION) return;
+
+  if (current < 2) {
+    for (const slug of ["cold-pressed-coconut-oil", "cold-pressed-white-sesame-oil", "cold-pressed-black-sesame-oil"]) {
+      const p = products.find((x) => x.slug === slug)!;
+      await db.query("update products set variants = $1::jsonb, updated_at = now() where slug = $2", [JSON.stringify(p.variants), slug]);
+    }
+    await insertCategory(db, categories.find((c) => c.id === "cat-honey")!, categories.length - 1);
+    await insertProduct(db, products.find((x) => x.slug === "pure-honey")!, products.length - 1);
+  }
+
+  await db.query(
+    `insert into settings (key, value) values ('catalog_version', $1::jsonb)
+     on conflict (key) do update set value = excluded.value, updated_at = now()`,
+    [JSON.stringify(CATALOG_VERSION)],
+  );
+}
+
+export async function seedDatabase(db: Db) {
+  const existing = await db.query<{ count: string | number }>("select count(*)::int as count from categories");
+  if (Number(existing[0]?.count ?? 0) > 0) {
+    await syncCatalog(db);
+    return;
+  }
+
+  for (const [i, c] of categories.entries()) await insertCategory(db, c, i);
+  for (const [i, p] of products.entries()) await insertProduct(db, p, i);
+  await syncCatalog(db);
 
   await db.query(
     `insert into settings (key, value) values ('site', $1::jsonb) on conflict (key) do nothing`,
