@@ -116,9 +116,7 @@
     });
   }
   // Children of staggered containers start hidden; the animation's fill takes over.
-  const style = document.createElement("style");
-  style.textContent = "[data-reveal][data-stagger] > *{will-change:opacity,transform}";
-  document.head.appendChild(style);
+  // (Their will-change hint lives in effects.css — the CSP blocks injected <style> tags.)
 
   /* ---------- Word-by-word headline reveal ---------- */
 

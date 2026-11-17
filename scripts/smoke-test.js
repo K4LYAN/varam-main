@@ -29,24 +29,40 @@ async function step(name, fn) {
   }
 }
 
-/** Minimal cookie-aware HTTP client. */
+/**
+ * Minimal browser-like HTTP client: keeps a cookie jar and, like the site's
+ * own JavaScript, echoes the varam_csrf cookie in X-CSRF-Token on writes.
+ */
 function client() {
-  let cookie = "";
-  return async function req(method, url, body, { origin = BASE, raw = false, headers = {} } = {}) {
+  const jar = new Map();
+  const cookieHeader = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
+  const store = (res) => {
+    for (const c of res.headers.getSetCookie()) {
+      const [pair, ...attrs] = c.split(";");
+      const i = pair.indexOf("=");
+      const name = pair.slice(0, i).trim();
+      const value = pair.slice(i + 1).trim();
+      const expired = attrs.some((a) => /^\s*expires=thu, 01 jan 1970/i.test(a)) || value === "";
+      if (expired) jar.delete(name);
+      else jar.set(name, value);
+    }
+  };
+  async function req(method, url, body, { origin = BASE, raw = false, headers = {}, csrf = true } = {}) {
+    if (csrf && method !== "GET" && !jar.has("varam_csrf")) store(await fetch(BASE + "/api/auth/csrf"));
     const isForm = body instanceof FormData;
     const res = await fetch(BASE + url, {
       method,
       redirect: "manual",
       headers: {
         ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
-        ...(cookie ? { Cookie: cookie } : {}),
+        ...(jar.size ? { Cookie: cookieHeader() } : {}),
         ...(origin ? { Origin: origin } : {}),
+        ...(csrf && method !== "GET" && jar.has("varam_csrf") ? { "X-CSRF-Token": jar.get("varam_csrf") } : {}),
         ...headers,
       },
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
-    const set = res.headers.get("set-cookie");
-    if (set) cookie = set.split(";")[0];
+    store(res);
     if (raw) return res;
     const text = await res.text();
     let data;
@@ -56,7 +72,9 @@ function client() {
       data = text;
     }
     return { status: res.status, data, headers: res.headers };
-  };
+  }
+  req.jar = jar;
+  return req;
 }
 
 async function waitForServer(proc) {
@@ -160,13 +178,28 @@ async function waitForServer(proc) {
       const ok = (await guest("POST", "/api/coupons/validate", { code: "varam10", items: [{ variantId: vid("pure-ghee"), quantity: 2 }] })).data;
       assert.equal(ok.valid, true);
       assert.equal(ok.discount, 160);
-      const bad = (await guest("POST", "/api/coupons/validate", { code: "FAKE", subtotal: 500 })).data;
+      const bad = (await guest("POST", "/api/coupons/validate", { code: "FAKE", items: [] })).data;
       assert.equal(bad.valid, false);
     });
 
-    await step("security: cross-site POST blocked (CSRF), admin API needs admin", async () => {
+    await step("security: cross-site POST blocked; CSRF token required; admin API needs admin", async () => {
       assert.equal((await guest("POST", "/api/checkout/quote", { items: [] }, { origin: "https://evil.example" })).status, 403);
+      const noToken = await guest("POST", "/api/checkout/quote", { items: [] }, { csrf: false });
+      assert.equal(noToken.status, 403);
+      assert.equal(noToken.data.code, "CSRF_INVALID");
+      const wrongToken = await guest("POST", "/api/checkout/quote", { items: [] }, { headers: { "X-CSRF-Token": "x".repeat(32) } });
+      assert.equal(wrongToken.status, 403);
+      assert.equal((await guest("POST", "/api/checkout/quote", { items: [] })).status, 200);
       assert.equal((await guest("GET", "/api/admin/stats")).status, 401);
+    });
+
+    await step("health: /api/health reports MySQL over the TCP fallback", async () => {
+      const h = await guest("GET", "/api/health");
+      assert.equal(h.status, 200);
+      assert.equal(h.data.status, "ok");
+      assert.equal(h.data.database.ok, true);
+      assert.match(h.data.database.transport, /^TCP /);
+      assert.ok(h.data.uptimeSeconds >= 0);
     });
 
     await step("register → session cookie; duplicate email rejected", async () => {
@@ -200,7 +233,7 @@ async function waitForServer(proc) {
         couponCode: "VARAM10",
       });
       assert.equal(r.status, 201, JSON.stringify(r.data));
-      assert.match(r.data.orderNumber, /^VRM-\d{4}-\d{4,}$/);
+      assert.match(r.data.orderNumber, /^VRM-\d{6}-[0-9A-HJKMNP-TV-Z]{8}$/); // random, not sequential
       assert.equal(r.data.subtotal, 2770); // 3 × 800 + 370
       assert.equal(r.data.discount, 277);
       assert.equal(r.data.deliveryFee, 0);
@@ -338,7 +371,7 @@ async function waitForServer(proc) {
       const csv = await admin("GET", "/api/admin/orders.csv");
       assert.equal(csv.status, 200);
       assert.match(csv.headers.get("content-type"), /text\/csv/);
-      assert.match(csv.data, /VRM-\d{4}-\d+/);
+      assert.match(csv.data, /VRM-\d{6}-[0-9A-Z]{8}/);
       assert.equal((await guest("GET", "/api/admin/orders.csv")).status, 401);
       assert.equal((await admin("GET", "/admin/customers")).status, 200);
     });
@@ -409,8 +442,11 @@ async function waitForServer(proc) {
     await step("admin: coupons + settings (delivery fee/threshold) change live totals", async () => {
       const c = await admin("POST", "/api/admin/coupons", { code: "diwali50", discountType: "flat", discountValue: 50, minOrderAmount: 500, isActive: true });
       assert.equal(c.status, 201);
-      const below = (await guest("POST", "/api/coupons/validate", { code: "DIWALI50", subtotal: 400 })).data;
-      assert.equal(below.valid, false);
+      const below = (await guest("POST", "/api/coupons/validate", { code: "DIWALI50", items: [{ variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }] })).data;
+      assert.equal(below.valid, false); // ₹370 < ₹500 minimum
+      // A subtotal sent by the browser is ignored — only the items count
+      const forged = (await guest("POST", "/api/coupons/validate", { code: "DIWALI50", subtotal: 99999, items: [] })).data;
+      assert.equal(forged.valid, false);
       const s = (await admin("GET", "/api/admin/settings")).data.settings;
       const upd = await admin("PUT", "/api/admin/settings", { ...s, free_delivery_threshold: 1500, delivery_fee: 80 });
       assert.equal(upd.status, 200, JSON.stringify(upd.data));
@@ -418,6 +454,60 @@ async function waitForServer(proc) {
       const q = (await guest("POST", "/api/checkout/quote", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], fulfillment: "delivery" })).data;
       assert.equal(q.deliveryFee, 80);
       assert.equal(q.total, 1080);
+    });
+
+    await step("coupon usage limit: one use, second order rejected; cancelling releases the use", async () => {
+      const c = await admin("POST", "/api/admin/coupons", { code: "ONCE100", discountType: "flat", discountValue: 100, minOrderAmount: 0, usageLimit: 1, expiresAt: "2099-12-31" });
+      assert.equal(c.status, 201, JSON.stringify(c.data));
+      const order = (who) =>
+        who("POST", "/api/orders", {
+          items: [{ variantId: vid("pure-ghee"), quantity: 1 }],
+          name: "Coupon Tester",
+          phone: "9123456780",
+          fulfillment: "pickup",
+          paymentMethod: "STORE",
+          couponCode: "ONCE100",
+        });
+      const first = await order(client());
+      assert.equal(first.status, 201, JSON.stringify(first.data));
+      assert.equal(first.data.discount, 100);
+      const second = await order(client());
+      assert.equal(second.status, 400);
+      const list = (await admin("GET", "/api/admin/coupons")).data.coupons;
+      assert.equal(list.find((x) => x.code === "ONCE100").usedCount, 1);
+      assert.equal(list.find((x) => x.code === "ONCE100").expiresAt, "2099-12-31");
+      await admin("PUT", `/api/admin/orders/${first.data.orderNumber}/status`, { status: "Cancelled" });
+      const after = (await admin("GET", "/api/admin/coupons")).data.coupons;
+      assert.equal(after.find((x) => x.code === "ONCE100").usedCount, 0);
+      const expired = await admin("POST", "/api/admin/coupons", { code: "OLD10", discountType: "percent", discountValue: 10, expiresAt: "2020-01-01" });
+      assert.equal(expired.status, 201);
+      assert.equal((await guest("POST", "/api/coupons/validate", { code: "OLD10", items: [{ variantId: vid("pure-ghee"), quantity: 1 }] })).data.valid, false);
+    });
+
+    await step("audit log: price, stock, coupon, settings and status changes are recorded", async () => {
+      const r = await admin("GET", "/api/admin/audit?limit=200");
+      assert.equal(r.status, 200);
+      const actions = new Set(r.data.entries.map((e) => e.action));
+      for (const a of ["variant.update", "variant.stock", "variant.create", "product.create", "order.status", "coupon.create", "settings.update"]) {
+        assert.ok(actions.has(a), `missing audit action ${a}`);
+      }
+      const priceChange = r.data.entries.find((e) => e.action === "variant.update" && e.after && "price" in e.after);
+      assert.ok(priceChange, "price change has before/after values");
+      assert.equal(priceChange.adminEmail, ADMIN.email);
+      assert.equal((await cust("GET", "/api/admin/audit")).status, 403);
+    });
+
+    await step("password change signs out other devices, keeps this one", async () => {
+      const phone1 = client();
+      const phone2 = client();
+      const reg = await phone1("POST", "/api/auth/register", { name: "Two Devices", email: "two@example.com", phone: "9000000002", password: "first-pass-1" });
+      assert.equal(reg.status, 201);
+      assert.equal((await phone2("POST", "/api/auth/login", { identifier: "two@example.com", password: "first-pass-1" })).status, 200);
+      const ch = await phone1("POST", "/api/auth/password", { currentPassword: "first-pass-1", newPassword: "second-pass-2" });
+      assert.equal(ch.status, 200);
+      assert.equal((await phone1("GET", "/api/auth/me")).data.user?.email, "two@example.com");
+      assert.equal((await phone2("GET", "/api/auth/me")).data.user, null);
+      assert.equal((await phone2("GET", "/api/account/orders")).status, 401);
     });
 
     await step("logout clears the session", async () => {

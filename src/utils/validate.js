@@ -1,13 +1,8 @@
 "use strict";
 
-class ValidationError extends Error {
-  constructor(message, field) {
-    super(message);
-    this.status = 400;
-    this.field = field;
-  }
-}
+const { ValidationError } = require("./httpError");
 
+/** Strip control characters, trim and cap length. */
 const clean = (v, max = 255) =>
   String(v ?? "")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
@@ -17,7 +12,7 @@ const clean = (v, max = 255) =>
 function str(v, field, { min = 0, max = 255, required = false } = {}) {
   const s = clean(v, max + 1);
   if (required && !s) throw new ValidationError(`${field} is required`, field);
-  if (s.length < min) throw new ValidationError(`${field} must be at least ${min} characters`, field);
+  if (s && s.length < min) throw new ValidationError(`${field} must be at least ${min} characters`, field);
   if (s.length > max) throw new ValidationError(`${field} is too long`, field);
   return s;
 }
@@ -33,7 +28,8 @@ function email(v, field = "Email", required = true) {
 function phone(v, field = "Phone", required = true) {
   const digits = String(v ?? "").replace(/\D/g, "");
   if (!digits && !required) return "";
-  const d = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits.length === 11 && digits.startsWith("0") ? digits.slice(1) : digits;
+  const d =
+    digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits.length === 11 && digits.startsWith("0") ? digits.slice(1) : digits;
   if (!/^[6-9]\d{9}$/.test(d)) throw new ValidationError("Enter a valid 10-digit mobile number", field);
   return d;
 }
@@ -50,6 +46,9 @@ function int(v, field, { min = 0, max = 1_000_000 } = {}) {
   if (!Number.isInteger(n) || n < min || n > max) throw new ValidationError(`${field} must be a whole number between ${min} and ${max}`, field);
   return n;
 }
+
+/** Positive database id from a route parameter. */
+const id = (v, field = "id") => int(v, field, { min: 1, max: 4_294_967_295 });
 
 function money(v, field, { min = 0, max = 10_000_000 } = {}) {
   const n = Number(v);
@@ -92,4 +91,13 @@ function url(v, field = "URL") {
   return s;
 }
 
-module.exports = { ValidationError, clean, str, email, phone, pincode, int, money, oneOf, bool, slug, hexColor, url };
+/** Optional date (YYYY-MM-DD or ISO) → "YYYY-MM-DD HH:MM:SS" end of that day in IST, or null. */
+function optionalDate(v, field) {
+  const s = clean(v, 30);
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (!m || Number.isNaN(Date.parse(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`))) throw new ValidationError(`${field} must be a date`, field);
+  return `${m[1]}-${m[2]}-${m[3]} 23:59:59`;
+}
+
+module.exports = { ValidationError, clean, str, email, phone, pincode, int, id, money, oneOf, bool, slug, hexColor, url, optionalDate };

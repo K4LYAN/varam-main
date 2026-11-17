@@ -15,11 +15,18 @@
   const STATUSES = ["Pending", "Confirmed", "Packed", "Out for Delivery", "Delivered", "Cancelled"];
   const statusClass = (s) => "st-" + String(s).split(" ")[0];
 
-  async function api(method, url, body, isForm) {
+  const csrfToken = () => {
+    const m = document.cookie.match(/(?:^|;\s*)varam_csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  };
+
+  async function api(method, url, body, isForm, retried = false) {
+    const headers = body && !isForm ? { "Content-Type": "application/json" } : {};
+    if (method !== "GET") headers["X-CSRF-Token"] = csrfToken();
     const res = await fetch(url, {
       method,
       credentials: "same-origin",
-      headers: body && !isForm ? { "Content-Type": "application/json" } : {},
+      headers,
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
     if (res.status === 401) {
@@ -27,6 +34,10 @@
       throw new Error("Session expired");
     }
     const data = await res.json().catch(() => ({}));
+    if (res.status === 403 && data.code === "CSRF_INVALID" && !retried) {
+      await fetch("/api/auth/csrf", { credentials: "same-origin" }).catch(() => {});
+      return api(method, url, body, isForm, true);
+    }
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
   }
@@ -127,7 +138,7 @@
     $(".admin-menu").setAttribute("aria-expanded", String(open));
   });
   $("#admin-logout").addEventListener("click", async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    await api("POST", "/api/auth/logout").catch(() => {});
     location.href = "/admin/login";
   });
 
@@ -146,8 +157,19 @@
         .join("")}</div>`;
   }
 
+  /** "price: 370 → 390" lines from an audit entry's before/after values. */
+  function auditDiff(a) {
+    const keys = new Set([...Object.keys(a.before || {}), ...Object.keys(a.after || {})]);
+    if (!keys.size) return '<span class="muted">—</span>';
+    const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : typeof v === "object" ? JSON.stringify(v) : String(v));
+    return [...keys]
+      .slice(0, 6)
+      .map((k) => `<div><span class="muted">${esc(k)}:</span> ${esc(fmt(a.before?.[k]).slice(0, 60))} → <b>${esc(fmt(a.after?.[k]).slice(0, 60))}</b></div>`)
+      .join("");
+  }
+
   async function renderDashboard() {
-    const s = await api("GET", "/api/admin/stats");
+    const [s, { entries: audit }] = await Promise.all([api("GET", "/api/admin/stats"), api("GET", "/api/admin/audit?limit=10")]);
     const topMax = Math.max(1, ...s.topProducts.map((t) => t.revenue));
     view.innerHTML = `
       ${s.defaultPassword ? `<div class="a-alert" role="alert"><b>You're using the default admin password.</b> <a href="/admin/settings" data-nav>Change it now →</a></div>` : ""}
@@ -201,7 +223,19 @@
                   .join("")
               : '<tr class="empty-row"><td colspan="4">All packs are well stocked</td></tr>'
           }</tbody></table></div></section>
-      </div>`;
+      </div>
+      <section class="a-panel"><div class="head"><h2>Recent admin activity</h2><span class="muted">Price, stock, coupon, settings and order-status changes</span></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Change</th></tr></thead><tbody>
+        ${
+          audit.length
+            ? audit
+                .map(
+                  (a) =>
+                    `<tr><td>${dt(a.createdAt)}</td><td>${esc(a.adminEmail)}</td><td><b>${esc(a.action)}</b><br><span class="muted">${esc(a.summary)}</span></td><td class="audit-diff">${auditDiff(a)}</td></tr>`,
+                )
+                .join("")
+            : '<tr class="empty-row"><td colspan="4">No changes recorded yet</td></tr>'
+        }</tbody></table></div></section>`;
   }
 
   // Quick restock from the dashboard
@@ -652,12 +686,15 @@
     }
     view.innerHTML = `
       <section class="a-panel"><div class="head"><h2>Coupons</h2></div>
-        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. order ₹</th><th>Active</th><th></th></tr></thead><tbody id="coupon-body">
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min. order ₹</th><th>Usage limit</th><th>Used</th><th>Expires</th><th>Active</th><th></th></tr></thead><tbody id="coupon-body">
           ${coupons.map(couponRow).join("")}
           <tr data-new-coupon><td><input class="inline" name="code" placeholder="NEWCODE" aria-label="New coupon code"></td>
             <td><select class="inline input" name="discountType" style="height:36px;min-height:36px" aria-label="Type"><option value="percent">% off</option><option value="flat">₹ off</option></select></td>
             <td><input class="inline" name="discountValue" type="number" min="0" step="0.01" placeholder="10" aria-label="Value"></td>
             <td><input class="inline" name="minOrderAmount" type="number" min="0" step="1" value="0" aria-label="Minimum order"></td>
+            <td><input class="inline" name="usageLimit" type="number" min="1" step="1" placeholder="No limit" aria-label="Usage limit"></td>
+            <td class="muted">0</td>
+            <td><input class="inline" name="expiresAt" type="date" aria-label="Expiry date"></td>
             <td><label class="toggle"><input type="checkbox" name="isActive" checked aria-label="Active"></label></td>
             <td><button class="btn btn-primary btn-sm" type="button" data-add-coupon>+ Add</button></td></tr>
         </tbody></table></div></section>
@@ -719,7 +756,7 @@
     $("#admin-pw").addEventListener("submit", async (e) => {
       e.preventDefault();
       const f = e.target;
-      const ok = await run(() => api("POST", "/api/auth/password", { currentPassword: f.currentPassword.value, newPassword: f.newPassword.value }), "Password updated");
+      const ok = await run(() => api("POST", "/api/auth/password", { currentPassword: f.currentPassword.value, newPassword: f.newPassword.value }), "Password updated — other devices signed out");
       if (ok) f.reset();
     });
 
@@ -731,6 +768,8 @@
         discountType: $('[name="discountType"]', tr).value,
         discountValue: $('[name="discountValue"]', tr).value,
         minOrderAmount: $('[name="minOrderAmount"]', tr).value || 0,
+        usageLimit: $('[name="usageLimit"]', tr).value || null,
+        expiresAt: $('[name="expiresAt"]', tr).value || null,
         isActive: $('[name="isActive"]', tr).checked,
       });
       if (e.target.closest("[data-add-coupon]")) {
@@ -755,6 +794,9 @@
       <td><select class="inline input" name="discountType" style="height:36px;min-height:36px" aria-label="Type"><option value="percent" ${c.discountType === "percent" ? "selected" : ""}>% off</option><option value="flat" ${c.discountType === "flat" ? "selected" : ""}>₹ off</option></select></td>
       <td><input class="inline" name="discountValue" type="number" min="0" step="0.01" value="${c.discountValue}" aria-label="Value"></td>
       <td><input class="inline" name="minOrderAmount" type="number" min="0" step="1" value="${c.minOrderAmount}" aria-label="Minimum order"></td>
+      <td><input class="inline" name="usageLimit" type="number" min="1" step="1" placeholder="No limit" value="${c.usageLimit ?? ""}" aria-label="Usage limit"></td>
+      <td>${c.usedCount}${c.usageLimit ? ` / ${c.usageLimit}` : ""}</td>
+      <td><input class="inline" name="expiresAt" type="date" value="${esc(c.expiresAt || "")}" aria-label="Expiry date"></td>
       <td><label class="toggle"><input type="checkbox" name="isActive" ${c.isActive ? "checked" : ""} aria-label="Active"></label></td>
       <td style="white-space:nowrap"><button class="btn btn-dark btn-sm" type="button" data-save-coupon>Save</button>
         <button class="link-btn" type="button" data-delete-coupon style="margin-left:8px">Delete</button></td></tr>`;

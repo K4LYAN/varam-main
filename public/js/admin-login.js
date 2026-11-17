@@ -2,6 +2,10 @@
 (function () {
   "use strict";
   const form = document.getElementById("admin-login");
+  const csrfToken = () => {
+    const m = document.cookie.match(/(?:^|;\s*)varam_csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  };
   const err = form.querySelector(".form-error");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -12,7 +16,7 @@
       const res = await fetch("/api/auth/login", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
         body: JSON.stringify({ identifier: form.identifier.value.trim(), password: form.password.value, adminOnly: true }),
       });
       const data = await res.json().catch(() => ({}));

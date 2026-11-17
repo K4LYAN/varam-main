@@ -339,13 +339,14 @@
         await api("POST", "/api/auth/password", { currentPassword: f.currentPassword.value, newPassword: f.newPassword.value });
         f.reset();
         $("#pw-bar").style.width = "0";
-        toast("Password updated");
+        toast("Password updated — other devices have been signed out");
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.remove("hidden");
       }
     });
     $("#logout").addEventListener("click", async () => {
+      await Cart.flush(); // save any pending cart edits to the account first
       await api("POST", "/api/auth/logout");
       location.href = "/";
     });

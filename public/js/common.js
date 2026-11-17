@@ -12,11 +12,20 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  async function api(method, url, body) {
+  /** CSRF token the server put in the varam_csrf cookie; echoed in X-CSRF-Token on every write. */
+  function csrfToken() {
+    const m = document.cookie.match(/(?:^|;\s*)varam_csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+
+  async function api(method, url, body, { keepalive = false, retried = false } = {}) {
+    const headers = body ? { "Content-Type": "application/json" } : {};
+    if (method !== "GET") headers["X-CSRF-Token"] = csrfToken();
     const res = await fetch(url, {
       method,
       credentials: "same-origin",
-      headers: body ? { "Content-Type": "application/json" } : {},
+      headers,
+      keepalive,
       body: body ? JSON.stringify(body) : undefined,
     });
     let data = null;
@@ -24,6 +33,11 @@
       data = await res.json();
     } catch {
       data = null;
+    }
+    // Token missing or rotated (e.g. cookies cleared in another tab): fetch a fresh one and retry once
+    if (res.status === 403 && data && data.code === "CSRF_INVALID" && !retried) {
+      await fetch("/api/auth/csrf", { credentials: "same-origin" }).catch(() => {});
+      return api(method, url, body, { keepalive, retried: true });
     }
     if (!res.ok) {
       const err = new Error((data && data.error) || `Request failed (${res.status})`);
@@ -204,18 +218,25 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     saveLocal() {
       if (!this.signedIn) store.set(CART_KEY, this.items);
     },
+    /**
+     * Optimistic update: the drawer and badge change instantly; for signed-in
+     * customers the server write is debounced per line and sent through one
+     * serial queue, so rapid +/− clicks become a single PUT carrying the final
+     * quantity and responses can never arrive out of order. On failure the
+     * cart rolls back to the server's copy.
+     */
     async setQty(variantId, quantity) {
       quantity = Math.max(0, Math.min(50, Math.floor(quantity)));
-      if (this.signedIn) {
-        this.items = (await api("PUT", "/api/cart/items", { variantId, quantity })).items;
-      } else {
-        const existing = this.items.find((i) => i.variantId === variantId);
-        if (quantity === 0) this.items = this.items.filter((i) => i.variantId !== variantId);
-        else if (existing) existing.quantity = quantity;
-        else this.items.push({ variantId, quantity });
-        this.saveLocal();
-      }
+      const existing = this.items.find((i) => i.variantId === variantId);
+      if (quantity === 0) this.items = this.items.filter((i) => i.variantId !== variantId);
+      else if (existing) existing.quantity = quantity;
+      else this.items.push({ variantId, quantity });
       this.changed(true);
+      if (!this.signedIn) {
+        this.saveLocal();
+        return;
+      }
+      return this.scheduleSync(variantId);
     },
     async add(variantId, quantity = 1) {
       const current = this.items.find((i) => i.variantId === variantId)?.quantity || 0;
@@ -225,10 +246,87 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       await this.setQty(variantId, 0);
     },
     async clear() {
+      this.cancelPending();
+      await this.queue;
       if (this.signedIn) await api("DELETE", "/api/cart");
       this.items = [];
       store.set(CART_KEY, []);
       this.changed(true);
+    },
+
+    /* ---- server sync (signed-in only) ---- */
+    timers: new Map(), // variantId -> debounce timer
+    waiters: new Map(), // variantId -> [{resolve, reject}] waiting for that line to be saved
+    queue: Promise.resolve(), // serial chain of cart writes
+    pendingWrites: 0,
+    scheduleSync(variantId) {
+      clearTimeout(this.timers.get(variantId));
+      const done = new Promise((resolve, reject) => {
+        if (!this.waiters.has(variantId)) this.waiters.set(variantId, []);
+        this.waiters.get(variantId).push({ resolve, reject });
+      });
+      this.timers.set(
+        variantId,
+        setTimeout(() => this.enqueueSync(variantId), 250),
+      );
+      return done;
+    },
+    enqueueSync(variantId) {
+      this.timers.delete(variantId);
+      const waiters = this.waiters.get(variantId) || [];
+      this.waiters.delete(variantId);
+      this.pendingWrites++;
+      const run = async () => {
+        // Send whatever the quantity is *now*, so the last click always wins
+        const quantity = this.items.find((i) => i.variantId === variantId)?.quantity || 0;
+        try {
+          const data = await api("PUT", "/api/cart/items", { variantId, quantity });
+          this.pendingWrites--;
+          // Adopt the server's copy only when no other edit is waiting, so we never undo a newer click
+          if (!this.pendingWrites && !this.timers.size) {
+            this.items = data.items;
+            this.changed(false);
+          }
+          waiters.forEach((w) => w.resolve());
+        } catch (err) {
+          this.pendingWrites--;
+          try {
+            this.items = (await api("GET", "/api/cart")).items; // roll back to the truth
+          } catch {
+            /* keep local state; next action retries */
+          }
+          this.changed(false);
+          waiters.forEach((w) => w.reject(err));
+        }
+      };
+      this.queue = this.queue.then(run, run);
+      return this.queue;
+    },
+    /** Send any debounced edits now and wait until every cart write has finished (before checkout, logout…). */
+    async flush() {
+      for (const id of [...this.timers.keys()]) {
+        clearTimeout(this.timers.get(id));
+        this.enqueueSync(id);
+      }
+      await this.queue.catch(() => {});
+    },
+    cancelPending() {
+      for (const [id, t] of this.timers) {
+        clearTimeout(t);
+        (this.waiters.get(id) || []).forEach((w) => w.resolve());
+      }
+      this.timers.clear();
+      this.waiters.clear();
+    },
+    /** Page is being left with edits still debounced: send them with keepalive so they survive navigation. */
+    flushOnExit() {
+      if (!this.signedIn || !this.timers.size) return;
+      for (const [id, t] of this.timers) {
+        clearTimeout(t);
+        const quantity = this.items.find((i) => i.variantId === id)?.quantity || 0;
+        api("PUT", "/api/cart/items", { variantId: id, quantity }, { keepalive: true }).catch(() => {});
+      }
+      this.timers.clear();
     },
     /** After login/register: push the guest cart to MySQL and switch to the account cart. */
     async mergeGuest() {
@@ -248,16 +346,21 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       this.refreshQuote();
       this.listeners.forEach((fn) => fn());
     },
+    quoteSeq: 0,
     refreshQuote: debounce(async function () {
+      const seq = ++Cart.quoteSeq;
+      let q = null;
       try {
-        Cart.quote = await api("POST", "/api/checkout/quote", {
+        q = await api("POST", "/api/checkout/quote", {
           items: Cart.items,
           couponCode: Cart.prefs.couponCode,
           fulfillment: Cart.prefs.fulfillment,
         });
       } catch {
-        Cart.quote = null;
+        q = null;
       }
+      if (seq !== Cart.quoteSeq) return; // a newer quote is on its way; drop this stale one
+      Cart.quote = q;
       renderDrawer();
     }, 120),
   };
@@ -718,6 +821,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     btn.disabled = true;
     btn.textContent = "Placing order…";
     try {
+      await Cart.flush(); // pending cart edits must land before the server clears the cart for this order
       const order = await api("POST", "/api/orders", {
         items: Cart.items,
         name: v.name,
@@ -909,6 +1013,8 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       }
     });
     if (location.hash === "#cart") openDrawer();
+    // Leaving the page within the 250 ms debounce window: send pending cart edits anyway
+    window.addEventListener("pagehide", () => Cart.flushOnExit());
   }
 
   state.ready = boot();

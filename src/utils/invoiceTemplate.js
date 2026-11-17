@@ -1,19 +1,6 @@
 "use strict";
 
-const crypto = require("crypto");
-const config = require("../config");
-
-/** Unguessable token so guests can open their own invoice link (and nobody else's). */
-function invoiceToken(orderNumber) {
-  return crypto.createHmac("sha256", config.jwtSecret).update(`invoice:${orderNumber}`).digest("base64url").slice(0, 24);
-}
-
-function verifyInvoiceToken(orderNumber, token) {
-  const expected = Buffer.from(invoiceToken(orderNumber));
-  const given = Buffer.from(String(token || ""));
-  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
-}
-
+/** HTML for the printable invoice / packing slip (all values escaped). */
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -76,4 +63,4 @@ function renderInvoice(order, items, settings, { packingSlip = false } = {}) {
 </body></html>`;
 }
 
-module.exports = { invoiceToken, verifyInvoiceToken, renderInvoice, esc, inr };
+module.exports = { renderInvoice, esc, inr };

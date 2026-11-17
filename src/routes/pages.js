@@ -1,70 +1,23 @@
 "use strict";
 
 const express = require("express");
-const path = require("path");
-const { query } = require("../db");
+const c = require("../controllers/pageController");
 const { requireUser, requireAdmin } = require("../middleware/auth");
-const { getSettings } = require("../lib/settings");
-const { renderInvoice, verifyInvoiceToken } = require("../lib/invoice");
-const config = require("../config");
-const v = require("../lib/validate");
 
 const router = express.Router();
-const VIEWS = path.join(__dirname, "..", "..", "views");
-const view = (name) => (_req, res) => res.sendFile(path.join(VIEWS, name));
 
-router.get("/", view("index.html"));
-router.get("/product/:slug", async (req, res) => {
-  const rows = await query("SELECT id FROM products WHERE slug = ? AND is_active = 1 LIMIT 1", [v.clean(req.params.slug, 150)]);
-  if (!rows.length) return res.status(404).sendFile(path.join(VIEWS, "404.html"));
-  res.sendFile(path.join(VIEWS, "product.html"));
-});
-router.get("/login", (req, res) => (req.user ? res.redirect("/account") : res.sendFile(path.join(VIEWS, "login.html"))));
-router.get("/register", (req, res) => (req.user ? res.redirect("/account") : res.sendFile(path.join(VIEWS, "register.html"))));
-router.get("/account", requireUser, view("account.html"));
+router.get("/", c.view("index.html"));
+router.get("/product/:slug", c.product);
+router.get("/login", c.login);
+router.get("/register", c.register);
+router.get("/account", requireUser, c.view("account.html"));
 
-router.get("/admin/login", (req, res) =>
-  req.user?.role === "admin" ? res.redirect("/admin") : res.sendFile(path.join(VIEWS, "admin", "login.html")),
-);
-router.get(["/admin", "/admin/products", "/admin/orders", "/admin/customers", "/admin/settings"], requireAdmin, (_req, res) => {
-  res.set("X-Robots-Tag", "noindex, nofollow");
-  res.sendFile(path.join(VIEWS, "admin", "index.html"));
-});
+router.get("/admin/login", c.adminLogin);
+router.get(["/admin", "/admin/products", "/admin/orders", "/admin/customers", "/admin/settings"], requireAdmin, c.adminApp);
+router.get("/admin/orders/:orderNumber/slip", requireAdmin, c.packingSlip);
 
-async function loadOrder(orderNumber) {
-  const [order] = await query("SELECT * FROM orders WHERE order_number = ? LIMIT 1", [v.clean(orderNumber, 30)]);
-  if (!order) return null;
-  const items = await query("SELECT * FROM order_items WHERE order_id = ? ORDER BY id", [order.id]);
-  return { order, items };
-}
+router.get("/invoice/:orderNumber", c.invoice);
+router.get("/robots.txt", c.robots);
+router.get("/sitemap.xml", c.sitemap);
 
-/** Printable invoice: the customer who placed it, an admin, or anyone holding the signed link. */
-router.get("/invoice/:orderNumber", async (req, res) => {
-  const data = await loadOrder(req.params.orderNumber);
-  const allowed =
-    data &&
-    (req.user?.role === "admin" ||
-      (req.user && data.order.user_id === req.user.id) ||
-      verifyInvoiceToken(data.order.order_number, req.query.t));
-  if (!allowed) return res.status(404).sendFile(path.join(VIEWS, "404.html"));
-  res.set("X-Robots-Tag", "noindex");
-  res.type("html").send(renderInvoice(data.order, data.items, await getSettings()));
-});
-
-router.get("/admin/orders/:orderNumber/slip", requireAdmin, async (req, res) => {
-  const data = await loadOrder(req.params.orderNumber);
-  if (!data) return res.status(404).sendFile(path.join(VIEWS, "404.html"));
-  res.type("html").send(renderInvoice(data.order, data.items, await getSettings(), { packingSlip: true }));
-});
-
-router.get("/robots.txt", (_req, res) => {
-  res.type("text/plain").send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /account\nDisallow: /invoice/\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
-});
-
-router.get("/sitemap.xml", async (_req, res) => {
-  const products = await query("SELECT slug FROM products WHERE is_active = 1 ORDER BY sort_order");
-  const urls = ["/", ...products.map((p) => `/product/${p.slug}`)].map((u) => `<url><loc>${config.siteUrl}${u}</loc></url>`).join("");
-  res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
-});
-
-module.exports = { router };
+module.exports = router;

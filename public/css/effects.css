@@ -897,3 +897,6 @@
     animation: none !important;
   }
 }
+
+/* Staggered reveal children (was injected by motion.js; CSP forbids inline <style>) */
+[data-reveal][data-stagger] > *{will-change:opacity,transform}

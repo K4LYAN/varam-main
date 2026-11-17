@@ -542,3 +542,5 @@ body.admin {
 
 .a-alert{background:#fff4e5;border:1px solid #f5b971;color:#7a4300;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .a-alert a{color:#b3261e;font-weight:700}
+.audit-diff{font-size:12.5px;line-height:1.5;min-width:220px}
+.audit-diff div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px}

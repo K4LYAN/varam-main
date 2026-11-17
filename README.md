@@ -15,45 +15,64 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 
 ## Folder structure
 
+Strict layers: **routes** map URLs to **controllers** (HTTP only: parse input, call a service, send the response) → **services** (business logic and *all* SQL) → **db** (pool, schema, migration). Controllers and routes contain no SQL.
+
 ```
 .
-├── server.js                  # Express app: security, static files, APIs, pages, error handler, boot
-├── package.json
-├── .env.example               # all configuration (copy to .env)
+├── server.js                      # boot (connect → migrate → listen) + graceful SIGTERM/SIGINT shutdown
+├── database/hardening.sql         # optional: the schema upgrades as plain SQL for phpMyAdmin
 ├── src/
-│   ├── config.js              # reads environment variables
-│   ├── db.js                  # MySQL pool: Unix socket first, TCP fallback; query/transaction helpers
-│   ├── migrate.js             # idempotent schema + seed (categories, products, VARAM10, settings, admin)
-│   ├── lib/
-│   │   ├── pricing.js         # single source of truth for prices, coupons, delivery fee, totals
-│   │   ├── settings.js        # store settings (cached)
-│   │   ├── invoice.js         # printable invoice / packing slip + signed invoice links
-│   │   └── validate.js        # input validation & sanitising
+│   ├── app.js                     # builds the Express app (middleware order, routers, error handler)
+│   ├── config/
+│   │   ├── index.js               # environment variables (validated, frozen)
+│   │   └── defaults.js            # business constants, default settings, default admin login
+│   ├── db/
+│   │   ├── pool.js                # mysql2 pool: Unix socket first, TCP fallback; query/transaction/ping
+│   │   ├── schema.js              # tables + idempotent upgrade steps (indexes, FKs, CHECKs, columns)
+│   │   ├── migrate.js             # runs schema + upgrades + seed under a MySQL named lock
+│   │   └── seed.js                # categories, VARAM's products & prices, settings, VARAM10, admin
 │   ├── middleware/
-│   │   ├── auth.js            # JWT session cookie (HTTP-only, SameSite=Lax), requireUser/requireAdmin
-│   │   └── security.js        # helmet CSP, same-origin (CSRF) check, rate limits
-│   └── routes/
-│       ├── auth.js            # register, login, logout, me, change password
-│       ├── catalog.js         # public catalogue + settings
-│       ├── cart.js            # account cart + guest-cart merge
-│       ├── checkout.js        # quote, coupon validation, place order (transaction)
-│       ├── account.js         # order history, reorder, profile
-│       ├── admin.js           # dashboard, products/variants, upload, orders, coupons, settings
-│       └── pages.js           # HTML pages, invoices, packing slips, robots, sitemap
-├── views/                     # HTML pages (index, login, register, account, 404, admin/*)
+│   │   ├── auth.js                # JWT session cookie, token_version revocation, requireUser/requireAdmin
+│   │   ├── csrf.js                # double-submit CSRF token (cookie + X-CSRF-Token header)
+│   │   ├── security.js            # helmet CSP/HSTS, same-origin check, rate limits
+│   │   └── errorHandler.js        # 404 + central error handler (no stack traces to clients)
+│   ├── validators/index.js        # request-body parsers (never read prices/totals from the client)
+│   ├── services/                  # business logic + SQL
+│   │   ├── pricingService.js      # single source of truth for prices, coupons, delivery fee, totals
+│   │   ├── orderService.js        # checkout transaction, random order numbers, cancel/restock, admin orders
+│   │   ├── cartService.js         # account cart, atomic guest-cart merge
+│   │   ├── catalogService.js      # storefront catalogue (short in-process cache)
+│   │   ├── productAdminService.js # products, pack sizes, prices, stock (audited)
+│   │   ├── couponService.js       # coupon preview + admin CRUD (usage limits, expiry; audited)
+│   │   ├── settingsService.js     # store settings (cached; audited updates)
+│   │   ├── accountService.js      # profile, address book, wishlist
+│   │   ├── authService.js         # register, login, password change
+│   │   ├── adminService.js        # dashboard figures, customers
+│   │   ├── auditService.js        # admin_audit_logs
+│   │   ├── invoiceService.js      # HMAC-signed invoice links
+│   │   ├── uploadService.js       # image magic-byte check + save
+│   │   └── healthService.js       # /api/health
+│   ├── controllers/               # one per area: auth, catalog, cart, checkout, account, admin, page, health
+│   ├── routes/                    # api.js (mounts all API routers) + auth, catalog, cart, checkout, account, admin, pages
+│   └── utils/                     # httpError, validate, csv (formula-safe), invoiceTemplate
+├── views/                         # HTML pages (index, product, login, register, account, 404, admin/*)
 ├── public/
-│   ├── css/                   # style.css (store), admin.css, invoice.css
-│   ├── js/                    # common.js (header/cart/checkout), home.js, auth.js, account.js, admin.js, …
+│   ├── css/                       # style.css, effects.css, admin.css, invoice.css
+│   ├── js/                        # common.js (header/cart/checkout), motion.js, home.js, product.js, account.js, admin.js, …
 │   ├── img/varam-logo.jpg
-│   └── uploads/               # admin-uploaded product images
+│   └── uploads/                   # admin-uploaded product images
+├── docs/ARCHITECTURE-AUDIT.md     # audit findings and what changed
 └── scripts/
-    ├── check.js               # syntax-check all JS
-    ├── dev-db.js              # local throwaway MySQL for development
-    └── smoke-test.js          # end-to-end tests against real MySQL
+    ├── check.js                   # syntax-check all JS
+    ├── dev-db.js                  # local throwaway MySQL for development
+    └── smoke-test.js              # 30 end-to-end checks against real MySQL
 ```
 
 ### Database tables
-`users`, `addresses`, `wishlist_items`, `categories`, `products`, `product_variants`, `cart_items`, `orders`, `order_items`, `coupons`, `site_settings` — created automatically on every boot with `CREATE TABLE IF NOT EXISTS` (safe to re-run). Seed data is inserted only into an empty database; existing data and admin changes are never overwritten.
+`users`, `addresses`, `wishlist_items`, `categories`, `products`, `product_variants`, `cart_items`, `orders`, `order_items`, `coupons`, `site_settings`, `admin_audit_logs` — created automatically on every boot with `CREATE TABLE IF NOT EXISTS`, then brought up to date by idempotent upgrade steps (safe to re-run; several Passenger workers take turns via a MySQL lock). Seed data is inserted only into an empty database; existing data and admin changes are never overwritten. `database/hardening.sql` contains the same upgrades as plain SQL if you prefer to run them in phpMyAdmin.
+
+### Health check
+`GET /api/health` returns `200 {"status":"ok", "database":{"ok":true,"transport":"socket /run/mysqld/mysqld.sock","latencyMs":1}, ...}` or `503` when MySQL is unreachable — point an uptime monitor (e.g. UptimeRobot) at it.
 
 ---
 
@@ -150,4 +169,4 @@ npm test           # 20 end-to-end checks against a fresh MySQL
 - Testimonials start empty — add only genuine customer or Google reviews.
 
 ## Security summary
-bcrypt password hashing (cost 12) · JWT in HTTP-only, SameSite=Lax cookies (Secure in production) · role checked from the database on every request · same-origin check on all state-changing API calls · rate limits on login, registration and orders · parameterised SQL everywhere · server-side validation · prices always recomputed on the server · stock locked with `SELECT … FOR UPDATE` inside the order transaction · uploads verified by file signature · strict Content-Security-Policy (no inline scripts) · invoices only for the customer, admins, or a signed link.
+bcrypt password hashing (cost 12) · JWT in HTTP-only, SameSite=Lax cookies (Secure in production); a password change revokes every other session (`token_version`) · role checked from the database on every request · CSRF: same-origin check **and** double-submit token on every state-changing API call · rate limits on login (failed attempts), registration, password change, orders and uploads · parameterised SQL everywhere · server-side validation · prices, discounts and totals always recomputed from MySQL (client values ignored) · stock locked with `SELECT … FOR UPDATE` and decremented with a guarded `UPDATE … WHERE stock_qty >= ?` inside the order transaction · coupon usage limits enforced inside the same transaction · random, non-sequential order numbers plus ownership check or HMAC-signed link for invoices · uploads verified by file signature · strict Content-Security-Policy (no inline scripts or `<style>` tags) · every admin price/stock/coupon/settings/order-status change written to `admin_audit_logs` · stack traces never sent to clients.

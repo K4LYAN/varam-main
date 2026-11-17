@@ -1,94 +1,67 @@
 "use strict";
 
 /**
- * Varam Organic Cold-Pressed Oils — store + admin panel
- * Node.js + Express + MySQL. Start with:  node server.js
+ * Varam Organic Cold-Pressed Oils — store + admin panel.
+ * Entry point for cPanel (Phusion Passenger), PM2 or `node server.js`.
+ *
+ * Boot:     connect MySQL (socket → TCP fallback) → idempotent migration → listen
+ * Shutdown: SIGTERM/SIGINT → stop accepting → finish in-flight requests →
+ *           close the MySQL pool → exit (forced after SHUTDOWN_TIMEOUT_MS)
  */
-
-const path = require("path");
-const express = require("express");
-const cookieParser = require("cookie-parser");
-const compression = require("compression");
-
 const config = require("./src/config");
-const { connect, close } = require("./src/db");
-const { migrate } = require("./src/migrate");
-const { loadUser } = require("./src/middleware/auth");
-const { securityHeaders, sameOrigin, apiLimiter } = require("./src/middleware/security");
-const { ValidationError } = require("./src/lib/validate");
+const { connect, close } = require("./src/db/pool");
+const { migrate } = require("./src/db/migrate");
+const { createApp } = require("./src/app");
 
-const app = express();
-app.disable("x-powered-by");
-if (config.trustProxy) app.set("trust proxy", 1); // cPanel / Passenger sits behind a proxy
-
-app.use(securityHeaders);
-app.use(compression());
-app.use(express.json({ limit: "200kb" }));
-app.use(cookieParser());
-
-// Static assets (long cache for images/uploads, revalidate CSS/JS)
-app.use(
-  express.static(path.join(__dirname, "public"), {
-    index: false,
-    setHeaders(res, filePath) {
-      if (/\.(jpg|jpeg|png|webp|svg|ico|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=2592000");
-      else res.setHeader("Cache-Control", "no-cache");
-    },
-  }),
-);
-
-// Product images uploaded from the admin panel (UPLOAD_DIR can live outside the app folder)
-app.use(
-  "/uploads",
-  express.static(config.uploadDir, {
-    index: false,
-    maxAge: "30d",
-    setHeaders(res) {
-      res.setHeader("X-Content-Type-Options", "nosniff");
-    },
-  }),
-);
-
-app.use(loadUser);
-
-// APIs
-const api = express.Router();
-api.use(apiLimiter);
-api.use(sameOrigin);
-api.use("/auth", require("./src/routes/auth").router);
-api.use("/", require("./src/routes/catalog").router);
-api.use("/cart", require("./src/routes/cart").router);
-api.use("/", require("./src/routes/checkout").router);
-api.use("/account", require("./src/routes/account").router);
-api.use("/admin", require("./src/routes/admin").router);
-api.use((_req, res) => res.status(404).json({ error: "Not found" }));
-app.use("/api", api);
-
-// Pages
-app.use("/", require("./src/routes/pages").router);
-app.use((_req, res) => res.status(404).sendFile(path.join(__dirname, "views", "404.html")));
-
-// Errors
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, _next) => {
-  const status = err instanceof ValidationError ? 400 : err.status || (err.type === "entity.parse.failed" ? 400 : 500);
-  if (status >= 500) console.error(`[error] ${req.method} ${req.originalUrl}`, err);
-  const message = status >= 500 ? "Something went wrong. Please try again." : err.message;
-  if (req.originalUrl.startsWith("/api")) return res.status(status).json({ error: message, field: err.field, details: err.details });
-  res.status(status).type("text").send(message);
-});
+const app = createApp();
+let server = null;
+let shuttingDown = false;
 
 async function start() {
   await connect();
   await migrate();
-  const server = app.listen(config.port, () => console.log(`[server] Varam store running on port ${config.port}`));
-  const shutdown = () => {
-    server.close(() => close().finally(() => process.exit(0)));
-    setTimeout(() => process.exit(1), 8000).unref();
-  };
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
+  await new Promise((resolve, reject) => {
+    server = app.listen(config.port, resolve);
+    server.once("error", reject);
+  });
+  // Keep-alive slightly above typical proxy timeouts so Passenger/Apache never reuse a socket we just closed
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
+  server.requestTimeout = 30000;
+  console.log(`[server] Varam store running on port ${config.port} (pid ${process.pid})`);
+  return server;
 }
+
+function shutdown(signal, exitCode = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[server] ${signal} received — shutting down`);
+  const force = setTimeout(() => {
+    console.error("[server] forced exit after timeout");
+    process.exit(1);
+  }, config.shutdownTimeoutMs);
+  force.unref();
+
+  const finish = () =>
+    close()
+      .catch((err) => console.error("[server] error closing database pool:", err.message))
+      .finally(() => process.exit(exitCode));
+
+  if (!server) return finish();
+  server.close(finish); // stops new connections; callback runs once in-flight requests finish
+  server.closeIdleConnections?.(); // drop idle keep-alive sockets now instead of waiting for their timeout
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Last-resort logging. A rejected promise is logged and the process keeps serving;
+// an uncaught exception leaves the process in an unknown state, so exit cleanly and let Passenger/PM2 restart it.
+process.on("unhandledRejection", (reason) => console.error("[server] unhandled promise rejection:", reason));
+process.on("uncaughtException", (err) => {
+  console.error("[server] uncaught exception:", err);
+  shutdown("uncaughtException", 1);
+});
 
 // cPanel's Node.js Selector (Phusion Passenger) loads this file through its own
 // loader, so start unconditionally unless a script imports the app on purpose.
@@ -99,4 +72,4 @@ if (process.env.VARAM_NO_AUTOSTART !== "1") {
   });
 }
 
-module.exports = { app, start };
+module.exports = { app, start, shutdown };

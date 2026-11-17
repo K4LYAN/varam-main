@@ -3,6 +3,7 @@
 const helmet = require("helmet");
 const { rateLimit } = require("express-rate-limit");
 const config = require("../config");
+const { forbidden } = require("../utils/httpError");
 
 const securityHeaders = helmet({
   contentSecurityPolicy: {
@@ -19,35 +20,43 @@ const securityHeaders = helmet({
       "connect-src": ["'self'"],
       "form-action": ["'self'"],
       "frame-ancestors": ["'self'"],
+      "object-src": ["'none'"],
+      "base-uri": ["'self'"],
       "upgrade-insecure-requests": config.isProd ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  strictTransportSecurity: config.isProd ? { maxAge: 15552000, includeSubDomains: true } : false,
 });
 
 /**
- * CSRF defence for cookie-authenticated APIs: state-changing requests must
- * come from our own origin (Origin or Referer header must match the Host).
+ * First CSRF layer for cookie-authenticated APIs: state-changing requests must
+ * come from our own origin (Origin or Referer host must match Host).
  */
-function sameOrigin(req, res, next) {
+function sameOrigin(req, _res, next) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
   const source = req.get("origin") || req.get("referer");
-  if (!source) return res.status(403).json({ error: "Missing origin" });
+  if (!source) return next(forbidden("Missing origin", "ORIGIN_MISSING"));
+  let host;
   try {
-    const { host } = new URL(source);
-    if (host !== req.get("host")) return res.status(403).json({ error: "Cross-site request blocked" });
+    host = new URL(source).host;
   } catch {
-    return res.status(403).json({ error: "Invalid origin" });
+    return next(forbidden("Invalid origin", "ORIGIN_INVALID"));
   }
+  if (host !== req.get("host")) return next(forbidden("Cross-site request blocked", "ORIGIN_MISMATCH"));
   next();
 }
 
-const json429 = (_req, res) => res.status(429).json({ error: "Too many attempts. Please wait a few minutes and try again." });
+const json429 = (_req, res) => res.status(429).json({ error: "Too many attempts. Please wait a few minutes and try again.", code: "RATE_LIMITED" });
+const limiter = (windowMs, limit, extra = {}) => rateLimit({ windowMs, limit, standardHeaders: "draft-8", legacyHeaders: false, handler: json429, ...extra });
 
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, handler: json429 });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, handler: json429 });
-const orderLimiter = rateLimit({ windowMs: 10 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false, handler: json429 });
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, limit: 300, standardHeaders: "draft-8", legacyHeaders: false, handler: json429 });
+// Note: the default store is in-memory per process; with several Passenger workers each keeps its own count.
+const loginLimiter = limiter(15 * 60 * 1000, 10, { skipSuccessfulRequests: true });
+const passwordLimiter = limiter(15 * 60 * 1000, 10);
+const registerLimiter = limiter(60 * 60 * 1000, 10);
+const orderLimiter = limiter(10 * 60 * 1000, 20);
+const uploadLimiter = limiter(10 * 60 * 1000, 60);
+const apiLimiter = limiter(60 * 1000, 300);
 
-module.exports = { securityHeaders, sameOrigin, loginLimiter, registerLimiter, orderLimiter, apiLimiter };
+module.exports = { securityHeaders, sameOrigin, loginLimiter, passwordLimiter, registerLimiter, orderLimiter, uploadLimiter, apiLimiter };

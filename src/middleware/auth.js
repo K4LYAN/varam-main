@@ -2,62 +2,62 @@
 
 const jwt = require("jsonwebtoken");
 const config = require("../config");
-const { query } = require("../db");
+const authService = require("../services/authService");
+const { unauthorized, forbidden } = require("../utils/httpError");
 
 const COOKIE = "varam_session";
+const cookieOptions = () => ({ httpOnly: true, sameSite: "lax", secure: config.isProd, path: "/" });
 
+/** Sign a session for this user. `tv` (token version) lets a password change revoke every older session. */
 function issueSession(res, user) {
-  const token = jwt.sign({ sub: String(user.id), role: user.role }, config.jwtSecret, {
+  const token = jwt.sign({ sub: String(user.id), tv: Number(user.token_version || 0) }, config.jwtSecret, {
     algorithm: "HS256",
     expiresIn: `${config.sessionDays}d`,
     issuer: "varam",
   });
-  res.cookie(COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: config.isProd,
-    path: "/",
-    maxAge: config.sessionDays * 24 * 60 * 60 * 1000,
-  });
+  res.cookie(COOKIE, token, { ...cookieOptions(), maxAge: config.sessionDays * 24 * 60 * 60 * 1000 });
 }
 
 function clearSession(res) {
-  res.clearCookie(COOKIE, { httpOnly: true, sameSite: "lax", secure: config.isProd, path: "/" });
+  res.clearCookie(COOKIE, cookieOptions());
 }
 
-/** Attaches req.user (id, name, email, phone, role, …) when a valid session cookie is present. */
-async function loadUser(req, _res, next) {
+/**
+ * Attach req.user when a valid session cookie is present. The role and token
+ * version are always read from the database, never trusted from the token.
+ */
+async function loadUser(req, res, next) {
   req.user = null;
   const token = req.cookies?.[COOKIE];
   if (!token) return next();
+  let payload;
   try {
-    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"], issuer: "varam" });
-    const rows = await query(
-      "SELECT id, name, email, phone, role, default_address, pincode, created_at FROM users WHERE id = ? LIMIT 1",
-      [Number(payload.sub)],
-    );
-    // Role is always read from the database, never trusted from the token alone
-    if (rows[0]) req.user = rows[0];
+    payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"], issuer: "varam" });
   } catch {
-    req.user = null;
+    clearSession(res);
+    return next();
   }
-  next();
+  try {
+    req.user = await authService.findSessionUser(Number(payload.sub), Number(payload.tv || 0));
+    if (!req.user) clearSession(res);
+    next();
+  } catch (err) {
+    next(err); // database trouble is a 500, not a silent sign-out
+  }
 }
 
+const isApi = (req) => req.originalUrl.startsWith("/api");
+
 function requireUser(req, res, next) {
-  if (!req.user) {
-    if (req.path.startsWith("/api") || req.originalUrl.startsWith("/api")) return res.status(401).json({ error: "Please sign in" });
-    return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
-  }
-  next();
+  if (req.user) return next();
+  if (isApi(req)) return next(unauthorized());
+  res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role !== "admin") {
-    if (req.originalUrl.startsWith("/api")) return res.status(req.user ? 403 : 401).json({ error: "Admin access required" });
-    return res.redirect("/admin/login");
-  }
-  next();
+  if (req.user && req.user.role === "admin") return next();
+  if (isApi(req)) return next(req.user ? forbidden("Admin access required") : unauthorized("Admin access required"));
+  res.redirect("/admin/login");
 }
 
 module.exports = { COOKIE, issueSession, clearSession, loadUser, requireUser, requireAdmin };
