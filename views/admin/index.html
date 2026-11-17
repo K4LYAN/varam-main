@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin · Varam</title>
+  <link rel="icon" href="/img/varam-logo.jpg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+  <div class="admin-shell">
+    <aside class="admin-side" id="admin-side">
+      <a class="brand" href="/admin"><img src="/img/varam-logo.jpg" alt="" width="40" height="40"><span><b>VARAM</b><small>ADMIN</small></span></a>
+      <nav class="admin-nav" aria-label="Admin">
+        <a href="/admin" data-route="dashboard">Dashboard</a>
+        <a href="/admin/products" data-route="products">Products &amp; prices</a>
+        <a href="/admin/orders" data-route="orders">Orders</a>
+        <a href="/admin/settings" data-route="settings">Coupons &amp; settings</a>
+        <a href="/" target="_blank" rel="noopener">View store &#8599;</a>
+      </nav>
+      <div class="admin-user"><span id="admin-email"></span><button class="link-btn" type="button" id="admin-logout">Sign out</button></div>
+    </aside>
+    <div class="admin-main">
+      <header class="admin-top">
+        <button class="icon-btn admin-menu" type="button" aria-label="Menu" aria-controls="admin-side" aria-expanded="false">&#9776;</button>
+        <h1 id="admin-title">Dashboard</h1>
+      </header>
+      <main id="admin-view" class="admin-view"><p class="muted">Loading&hellip;</p></main>
+    </div>
+  </div>
+  <div class="toasts" aria-live="polite"></div>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

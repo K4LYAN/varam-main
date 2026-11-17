@@ -1,0 +1,355 @@
+"use strict";
+
+/**
+ * End-to-end smoke test against a real MySQL server.
+ * Starts a throwaway MySQL (mysql-memory-server), boots server.js on it and
+ * exercises every storefront, checkout, account and admin flow over HTTP.
+ *
+ *   npm test
+ */
+const { spawn } = require("child_process");
+const path = require("path");
+const assert = require("assert/strict");
+const { createDB } = require("mysql-memory-server");
+
+const PORT = 3199;
+const BASE = `http://127.0.0.1:${PORT}`;
+const ADMIN = { email: "admin.test@varam.local", password: "Test-Admin-Pass-2026" };
+
+let passed = 0;
+const results = [];
+async function step(name, fn) {
+  try {
+    await fn();
+    passed++;
+    results.push(`  ✓ ${name}`);
+  } catch (err) {
+    results.push(`  ✗ ${name}\n      ${err.message}`);
+    throw err;
+  }
+}
+
+/** Minimal cookie-aware HTTP client. */
+function client() {
+  let cookie = "";
+  return async function req(method, url, body, { origin = BASE, raw = false, headers = {} } = {}) {
+    const isForm = body instanceof FormData;
+    const res = await fetch(BASE + url, {
+      method,
+      redirect: "manual",
+      headers: {
+        ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(origin ? { Origin: origin } : {}),
+        ...headers,
+      },
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
+    });
+    const set = res.headers.get("set-cookie");
+    if (set) cookie = set.split(";")[0];
+    if (raw) return res;
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+    return { status: res.status, data, headers: res.headers };
+  };
+}
+
+async function waitForServer(proc) {
+  for (let i = 0; i < 120; i++) {
+    if (proc.exitCode !== null) throw new Error("server exited early");
+    try {
+      const r = await fetch(`${BASE}/api/settings`);
+      if (r.ok) return;
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error("server did not start");
+}
+
+(async () => {
+  console.log("Starting temporary MySQL…");
+  const db = await createDB({ version: "8.4.x", dbName: "varam_test", logLevel: "ERROR" });
+  const logs = [];
+  const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
+    env: {
+      ...process.env,
+      NODE_ENV: "test",
+      PORT: String(PORT),
+      DB_SOCKET: "/run/mysqld/mysqld.sock", // not present here → exercises the TCP fallback
+      DB_HOST: "127.0.0.1",
+      DB_PORT: String(db.port),
+      DB_USER: db.username,
+      DB_PASSWORD: "",
+      DB_NAME: db.dbName,
+      JWT_SECRET: "test-secret-0123456789-0123456789-abcdef",
+      ADMIN_EMAIL: ADMIN.email,
+      ADMIN_PASSWORD: ADMIN.password,
+      UPLOAD_DIR: path.join(__dirname, "..", ".test-uploads"),
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  server.stdout.on("data", (d) => logs.push(d.toString()));
+  server.stderr.on("data", (d) => logs.push(d.toString()));
+
+  const cleanup = async () => {
+    server.kill();
+    await db.stop().catch(() => {});
+    require("fs").rmSync(path.join(__dirname, "..", ".test-uploads"), { recursive: true, force: true });
+  };
+
+  try {
+    await waitForServer(server);
+    const guest = client();
+    const cust = client();
+    const admin = client();
+    let catalog;
+    const vid = (slug) => catalog.products.find((p) => p.slug === slug).variants[0].id;
+
+    console.log("Running tests…");
+
+    await step("boot: DB socket missing → TCP fallback, schema + seed created", async () => {
+      const all = logs.join("");
+      assert.match(all, /falling back to TCP|not found; using TCP/);
+      assert.match(all, /connected via TCP/);
+      assert.match(all, /seeded 7 categories and 9 products/);
+    });
+
+    await step("pages render (/, /login, /register, robots, 404)", async () => {
+      for (const u of ["/", "/login", "/register", "/robots.txt"]) assert.equal((await guest("GET", u)).status, 200, u);
+      assert.equal((await guest("GET", "/nope")).status, 404);
+      assert.equal((await guest("GET", "/account")).status, 302);
+    });
+
+    await step("catalog: 9 products with VARAM's real prices", async () => {
+      catalog = (await guest("GET", "/api/catalog")).data;
+      assert.equal(catalog.products.length, 9);
+      const price = (slug) => catalog.products.find((p) => p.slug === slug).variants[0].price;
+      assert.equal(price("wood-pressed-groundnut-oil"), 370);
+      assert.equal(price("wood-pressed-coconut-oil"), 700);
+      assert.equal(price("wood-pressed-white-sesame-oil"), 550);
+      assert.equal(price("wood-pressed-black-sesame-oil"), 520);
+      assert.equal(price("kachi-ghani-mustard-oil"), 480);
+      assert.equal(price("pure-castor-oil"), 480);
+      assert.equal(price("wood-pressed-sunflower-oil"), 550);
+      assert.equal(price("pure-ghee"), 800);
+      assert.equal(price("pure-honey"), 1000);
+      assert.equal(catalog.settings.whatsappNumber, "917799228444");
+    });
+
+    await step("quote: delivery fee ₹60 under ₹999, free above, pickup free", async () => {
+      const small = (await guest("POST", "/api/checkout/quote", { items: [{ variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }], fulfillment: "delivery" })).data;
+      assert.equal(small.subtotal, 370);
+      assert.equal(small.deliveryFee, 60);
+      assert.equal(small.total, 430);
+      assert.equal(small.amountToFreeDelivery, 629);
+      const big = (await guest("POST", "/api/checkout/quote", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], fulfillment: "delivery" })).data;
+      assert.equal(big.deliveryFee, 0);
+      const pick = (await guest("POST", "/api/checkout/quote", { items: [{ variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }], fulfillment: "pickup" })).data;
+      assert.equal(pick.deliveryFee, 0);
+      assert.equal(pick.total, 370);
+    });
+
+    await step("coupon VARAM10 gives 10% off; unknown code rejected", async () => {
+      const ok = (await guest("POST", "/api/coupons/validate", { code: "varam10", items: [{ variantId: vid("pure-ghee"), quantity: 2 }] })).data;
+      assert.equal(ok.valid, true);
+      assert.equal(ok.discount, 160);
+      const bad = (await guest("POST", "/api/coupons/validate", { code: "FAKE", subtotal: 500 })).data;
+      assert.equal(bad.valid, false);
+    });
+
+    await step("security: cross-site POST blocked (CSRF), admin API needs admin", async () => {
+      assert.equal((await guest("POST", "/api/checkout/quote", { items: [] }, { origin: "https://evil.example" })).status, 403);
+      assert.equal((await guest("GET", "/api/admin/stats")).status, 401);
+    });
+
+    await step("register → session cookie; duplicate email rejected", async () => {
+      const r = await cust("POST", "/api/auth/register", { name: "Test Customer", email: "cust@example.com", phone: "9876543210", password: "secret-pass-1" });
+      assert.equal(r.status, 201);
+      assert.equal(r.data.user.role, "customer");
+      assert.equal((await guest("POST", "/api/auth/register", { name: "Another Person", email: "cust@example.com", phone: "9876500000", password: "secret-pass-1" })).status, 409);
+      assert.equal((await cust("GET", "/api/admin/stats")).status, 403);
+    });
+
+    await step("guest cart merges into account cart (quantities add up)", async () => {
+      await cust("PUT", "/api/cart/items", { variantId: vid("pure-ghee"), quantity: 1 });
+      const merged = (await cust("POST", "/api/cart/merge", { items: [{ variantId: vid("pure-ghee"), quantity: 2 }, { variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }] })).data;
+      const ghee = merged.items.find((i) => i.variantId === vid("pure-ghee"));
+      assert.equal(ghee.quantity, 3);
+      assert.equal(merged.items.length, 2);
+    });
+
+    let orderNumber;
+    let invoiceUrl;
+    await step("place order (transaction): totals, coupon, stock decremented, cart cleared", async () => {
+      const before = (await cust("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
+      const r = await cust("POST", "/api/orders", {
+        items: (await cust("GET", "/api/cart")).data.items,
+        name: "Test Customer",
+        phone: "9876543210",
+        fulfillment: "delivery",
+        address: "12-3-45, Lakshmi Nagar, Vijayawada",
+        pincode: "520011",
+        paymentMethod: "UPI",
+        couponCode: "VARAM10",
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.data));
+      assert.match(r.data.orderNumber, /^VRM-\d{4}-\d{4,}$/);
+      assert.equal(r.data.subtotal, 2770); // 3 × 800 + 370
+      assert.equal(r.data.discount, 277);
+      assert.equal(r.data.deliveryFee, 0);
+      assert.equal(r.data.total, 2493);
+      orderNumber = r.data.orderNumber;
+      invoiceUrl = r.data.invoiceUrl;
+      const after = (await cust("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
+      assert.equal(after, before - 3);
+      assert.equal((await cust("GET", "/api/cart")).data.items.length, 0);
+    });
+
+    await step("invoice: owner + signed link allowed, strangers get 404", async () => {
+      assert.equal((await cust("GET", `/invoice/${orderNumber}`)).status, 200);
+      assert.equal((await guest("GET", `/invoice/${orderNumber}`)).status, 404);
+      const signed = await guest("GET", invoiceUrl);
+      assert.equal(signed.status, 200);
+      assert.match(signed.data, /₹2,493/);
+    });
+
+    await step("guest pickup order (pay at store); invalid combos rejected", async () => {
+      const ok = await guest("POST", "/api/orders", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], name: "Walk In", phone: "9123456789", fulfillment: "pickup", paymentMethod: "STORE" });
+      assert.equal(ok.status, 201, JSON.stringify(ok.data));
+      assert.equal(ok.data.total, 1000);
+      const bad = await guest("POST", "/api/orders", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], name: "Walk In", phone: "9123456789", fulfillment: "pickup", paymentMethod: "COD" });
+      assert.equal(bad.status, 400);
+      const noAddr = await guest("POST", "/api/orders", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], name: "A B", phone: "9123456789", fulfillment: "delivery", paymentMethod: "COD" });
+      assert.equal(noAddr.status, 400);
+    });
+
+    await step("cannot order more than stock (409), nothing is written", async () => {
+      // Ghee started at 50 and 3 were ordered above, so 50 more must be refused
+      const r = await guest("POST", "/api/orders", { items: [{ variantId: vid("pure-ghee"), quantity: 50 }], name: "Bulk Buyer", phone: "9123456780", fulfillment: "pickup", paymentMethod: "STORE" });
+      assert.equal(r.status, 409, JSON.stringify(r.data));
+      assert.match(r.data.error, /out of stock/i);
+      const stock = (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
+      assert.equal(stock, 47);
+    });
+
+    await step("account: order history + one-click reorder refills the cart", async () => {
+      const orders = (await cust("GET", "/api/account/orders")).data.orders;
+      assert.equal(orders.length, 1);
+      assert.equal(orders[0].items.length, 2);
+      const re = (await cust("POST", `/api/account/orders/${orderNumber}/reorder`)).data;
+      assert.equal(re.items.length, 2);
+      const p = (await cust("PUT", "/api/account/profile", { name: "Test Customer", phone: "9876543210", defaultAddress: "New address 520011", pincode: "520011" })).data;
+      assert.equal(p.user.defaultAddress, "New address 520011");
+    });
+
+    await step("login: wrong password rejected, customer cannot use admin login", async () => {
+      assert.equal((await guest("POST", "/api/auth/login", { identifier: ADMIN.email, password: "wrong-password" })).status, 401);
+      assert.equal((await client()("POST", "/api/auth/login", { identifier: "9876543210", password: "secret-pass-1", adminOnly: true })).status, 403);
+      assert.equal((await client()("POST", "/api/auth/login", { identifier: "9876543210", password: "secret-pass-1" })).status, 200);
+    });
+
+    await step("admin: login + dashboard KPIs", async () => {
+      assert.equal((await admin("POST", "/api/auth/login", { identifier: ADMIN.email, password: ADMIN.password, adminOnly: true })).status, 200);
+      assert.equal((await admin("GET", "/admin")).status, 200);
+      const s = (await admin("GET", "/api/admin/stats")).data;
+      assert.equal(s.totalOrders, 2);
+      assert.equal(s.pendingOrders, 2);
+      assert.equal(s.totalCustomers, 1);
+      assert.equal(s.totalRevenue, 3493);
+    });
+
+    await step("admin: inline price/MRP/stock edit goes live; add 5L Tin pack size", async () => {
+      const prods = (await admin("GET", "/api/admin/products")).data.products;
+      const gn = prods.find((p) => p.slug === "wood-pressed-groundnut-oil");
+      const v = gn.variants[0];
+      const up = await admin("PUT", `/api/admin/variants/${v.id}`, { sizeLabel: "1 Litre", sku: v.sku, price: 380, mrp: 420, stockQty: 4, sortOrder: 0 });
+      assert.equal(up.status, 200, JSON.stringify(up.data));
+      const bad = await admin("PUT", `/api/admin/variants/${v.id}`, { sizeLabel: "1 Litre", sku: v.sku, price: 500, mrp: 400, stockQty: 4 });
+      assert.equal(bad.status, 400);
+      const add = await admin("POST", `/api/admin/products/${gn.id}/variants`, { sizeLabel: "5L Tin", sku: "VRM-GN-5L", price: 1800, mrp: 1850, stockQty: 10, sortOrder: 1 });
+      assert.equal(add.status, 201, JSON.stringify(add.data));
+      const live = (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "wood-pressed-groundnut-oil");
+      assert.equal(live.variants.length, 2);
+      assert.equal(live.variants[0].price, 380);
+      assert.equal(live.variants[0].mrp, 420);
+      assert.equal(live.variants[0].stockStatus, "low");
+      assert.equal((await admin("GET", "/api/admin/stats")).data.lowStock.some((l) => l.variantId === v.id), true);
+    });
+
+    await step("admin: create product with image upload; hide/feature toggles", async () => {
+      const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+      const fd = new FormData();
+      fd.append("image", new Blob([png], { type: "image/png" }), "x.png");
+      const up = await admin("POST", "/api/admin/upload", fd);
+      assert.equal(up.status, 201, JSON.stringify(up.data));
+      assert.equal((await guest("GET", up.data.url)).status, 200);
+      const fake = new FormData();
+      fake.append("image", new Blob(["<script>alert(1)</script>"], { type: "image/png" }), "evil.png");
+      assert.equal((await admin("POST", "/api/admin/upload", fake)).status, 415);
+      const cats = (await admin("GET", "/api/admin/categories")).data.categories;
+      const created = await admin("POST", "/api/admin/products", {
+        name: "Test Kitchen Combo", categoryId: cats[0].id, tagline: "Test", description: "Test", imageUrl: up.data.url, accentColor: "#D97706",
+        badgeText: "Combo", isActive: true, isFeatured: false, variants: [{ sizeLabel: "Combo Pack", sku: "VRM-TEST-COMBO", price: 1120, stockQty: 5 }],
+      });
+      assert.equal(created.status, 201, JSON.stringify(created.data));
+      assert.equal((await guest("GET", "/api/catalog")).data.products.length, 10);
+      await admin("PATCH", `/api/admin/products/${created.data.id}/flags`, { isActive: false });
+      assert.equal((await guest("GET", "/api/catalog")).data.products.length, 9);
+      assert.equal((await admin("DELETE", `/api/admin/products/${created.data.id}`)).status, 200);
+    });
+
+    await step("admin: orders filter, status update, cancel restores stock, packing slip", async () => {
+      const list = (await admin("GET", "/api/admin/orders?fulfillment=pickup")).data;
+      assert.equal(list.total, 1);
+      const injection = (await admin("GET", "/api/admin/orders?q=" + encodeURIComponent("' OR 1=1 -- "))).data;
+      assert.equal(injection.total, 0);
+      const r = await admin("PUT", `/api/admin/orders/${orderNumber}/status`, { status: "Packed" });
+      assert.equal(r.status, 200);
+      const before = (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
+      await admin("PUT", `/api/admin/orders/${orderNumber}/status`, { status: "Cancelled" });
+      const after = (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
+      assert.equal(after, before + 3);
+      assert.equal((await admin("PUT", `/api/admin/orders/${orderNumber}/status`, { status: "Confirmed" })).status, 400);
+      const slip = await admin("GET", `/admin/orders/${orderNumber}/slip`);
+      assert.equal(slip.status, 200);
+      assert.match(slip.data, /Packing slip/);
+    });
+
+    await step("admin: coupons + settings (delivery fee/threshold) change live totals", async () => {
+      const c = await admin("POST", "/api/admin/coupons", { code: "diwali50", discountType: "flat", discountValue: 50, minOrderAmount: 500, isActive: true });
+      assert.equal(c.status, 201);
+      const below = (await guest("POST", "/api/coupons/validate", { code: "DIWALI50", subtotal: 400 })).data;
+      assert.equal(below.valid, false);
+      const s = (await admin("GET", "/api/admin/settings")).data.settings;
+      const upd = await admin("PUT", "/api/admin/settings", { ...s, free_delivery_threshold: 1500, delivery_fee: 80 });
+      assert.equal(upd.status, 200, JSON.stringify(upd.data));
+      // settings cache is per-process with a short TTL; it was cleared on save
+      const q = (await guest("POST", "/api/checkout/quote", { items: [{ variantId: vid("pure-honey"), quantity: 1 }], fulfillment: "delivery" })).data;
+      assert.equal(q.deliveryFee, 80);
+      assert.equal(q.total, 1080);
+    });
+
+    await step("logout clears the session", async () => {
+      await cust("POST", "/api/auth/logout");
+      assert.equal((await cust("GET", "/api/auth/me")).data.user, null);
+    });
+
+    console.log(results.join("\n"));
+    console.log(`\n${passed} checks passed`);
+    await cleanup();
+    process.exit(0);
+  } catch (err) {
+    console.log(results.join("\n"));
+    console.error("\nFAILED:", err.message);
+    console.error("--- server log (tail) ---\n" + logs.join("").split("\n").slice(-30).join("\n"));
+    await cleanup();
+    process.exit(1);
+  }
+})();
