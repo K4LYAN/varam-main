@@ -4,7 +4,16 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const config = require("../config");
 const { query } = require("../db/pool");
-const { conflict, unauthorized, forbidden } = require("../utils/httpError");
+const { conflict, unauthorized, forbidden, HttpError } = require("../utils/httpError");
+
+// After MAX_FAILED wrong passwords in a row the account is locked for LOCK_MINUTES,
+// on top of the per-IP rate limit — so a slow attack from many IPs still stops.
+const MAX_FAILED = 5;
+const LOCK_MINUTES = 15;
+const lockedError = () =>
+  new HttpError(429, `Too many wrong passwords. For your safety this account is locked for ${LOCK_MINUTES} minutes — or ask us to reset your password.`, {
+    code: "ACCOUNT_LOCKED",
+  });
 
 const SESSION_COLUMNS = "id, name, email, phone, role, default_address, pincode, token_version, must_change_password, is_active, created_at";
 
@@ -59,16 +68,30 @@ async function login({ identifier, password, adminOnly }) {
   const digits = identifier.replace(/\D/g, "");
   const phone = digits.length >= 10 ? digits.slice(-10) : "";
   const [user] = await query(
-    `SELECT ${SESSION_COLUMNS}, password_hash FROM users WHERE email = ? OR (phone = ? AND ? <> '') LIMIT 1`,
+    `SELECT ${SESSION_COLUMNS}, password_hash, (locked_until IS NOT NULL AND locked_until > CURRENT_TIMESTAMP) AS is_locked
+     FROM users WHERE email = ? OR (phone = ? AND ? <> '') LIMIT 1`,
     [identifier, phone, phone],
   );
   const ok = await bcrypt.compare(password, user ? user.password_hash : await getDummyHash());
-  if (!user || !ok) throw unauthorized("Incorrect email/phone or password");
+  if (user && Number(user.is_locked)) throw lockedError(); // even a correct password waits out the lock
+  if (!user || !ok) {
+    if (user) {
+      // MySQL applies SET assignments left to right, so the IF sees the incremented count
+      await query(
+        `UPDATE users SET failed_login_count = failed_login_count + 1,
+           locked_until = IF(failed_login_count >= ?, CURRENT_TIMESTAMP + INTERVAL ? MINUTE, locked_until)
+         WHERE id = ?`,
+        [MAX_FAILED, LOCK_MINUTES, user.id],
+      );
+    }
+    throw unauthorized("Incorrect email/phone or password");
+  }
   // Checked only after the password, so a disabled account is not revealed to someone guessing
   if (!user.is_active) throw forbidden("This account has been disabled. Please contact the store on WhatsApp.", "ACCOUNT_DISABLED");
   if (adminOnly && user.role !== "admin") throw forbidden("This account does not have admin access");
-  await query("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?", [user.id]);
+  await query("UPDATE users SET last_login_at = CURRENT_TIMESTAMP, failed_login_count = 0, locked_until = NULL WHERE id = ?", [user.id]);
   delete user.password_hash;
+  delete user.is_locked;
   return user;
 }
 
@@ -84,4 +107,4 @@ async function changePassword(userId, current, next) {
   return findById(userId);
 }
 
-module.exports = { publicUser, findSessionUser, findById, register, login, changePassword };
+module.exports = { MAX_FAILED, LOCK_MINUTES, publicUser, findSessionUser, findById, register, login, changePassword };

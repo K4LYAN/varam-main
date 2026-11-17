@@ -27,7 +27,7 @@ function me(req, res) {
 
 /** Change password, sign out every other device, keep this one signed in. */
 async function changePassword(req, res) {
-  const { current, next } = validate.passwordChange(req.body);
+  const { current, next } = validate.passwordChange(req.body, req.user);
   const user = await authService.changePassword(req.user.id, current, next);
   issueSession(res, user);
   res.json({ ok: true, user: authService.publicUser(user) });

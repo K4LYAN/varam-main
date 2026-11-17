@@ -153,7 +153,7 @@
   }
 
   function emptyOrders() {
-    return `<div class="empty"><div class="empty-art">${I.bag}</div><h3>No orders yet</h3><p class="muted" style="margin:6px 0 14px">Your orders and their live status will appear here.</p><a class="btn btn-primary" href="/#shop">Start shopping</a></div>`;
+    return `<div class="empty"><div class="empty-art">${I.bag}</div><h3>No orders yet</h3><p class="muted" style="margin:6px 0 14px">Your orders and their live status will appear here.</p><a class="btn btn-primary" href="/shop">Start shopping</a></div>`;
   }
 
   function renderOverview() {
@@ -164,7 +164,7 @@
         <section class="panel"><h2>Latest order</h2>${latest ? orderCard(latest) : emptyOrders()}</section>
         <section class="panel"><h2>Quick actions</h2>
           <div style="display:grid;gap:10px">
-            <a class="btn btn-primary" href="/#shop">${I.bag} Shop cold-pressed oils</a>
+            <a class="btn btn-primary" href="/shop">${I.bag} Shop cold-pressed oils</a>
             ${latest ? `<button class="btn btn-outline" type="button" data-reorder="${esc(latest.orderNumber)}">Reorder last order</button>` : ""}
             <button class="btn btn-outline" type="button" data-goto="addresses">Manage addresses</button>
             <a class="btn btn-wa" href="https://wa.me/${esc(s.whatsappNumber || "917799228444")}" target="_blank" rel="noopener">${I.wa} Chat with Varam</a>
@@ -277,7 +277,7 @@
     const list = products.filter((p) => Wishlist.has(p.id));
     $("#c-wishlist").textContent = String(list.length);
     if (!list.length) {
-      $("#panel").innerHTML = `<div class="empty"><div class="empty-art">${I.heart}</div><h3>Your wishlist is empty</h3><p class="muted" style="margin:6px 0 14px">Tap the heart on any product to save it here.</p><a class="btn btn-primary" href="/#shop">Browse products</a></div>`;
+      $("#panel").innerHTML = `<div class="empty"><div class="empty-art">${I.heart}</div><h3>Your wishlist is empty</h3><p class="muted" style="margin:6px 0 14px">Tap the heart on any product to save it here.</p><a class="btn btn-primary" href="/shop">Browse products</a></div>`;
       return;
     }
     $("#panel").innerHTML = `<div class="grid" data-reveal data-stagger="70">${list

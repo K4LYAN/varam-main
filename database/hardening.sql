@@ -77,6 +77,9 @@ CALL varam_add_column('users', 'must_change_password', 'must_change_password TIN
 -- User management: disable accounts without deleting them; show last sign-in
 CALL varam_add_column('users', 'is_active', 'is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER must_change_password');
 CALL varam_add_column('users', 'last_login_at', 'last_login_at TIMESTAMP NULL DEFAULT NULL AFTER is_active');
+-- Account lockout after repeated wrong passwords
+CALL varam_add_column('users', 'failed_login_count', 'failed_login_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER last_login_at');
+CALL varam_add_column('users', 'locked_until', 'locked_until TIMESTAMP NULL DEFAULT NULL AFTER failed_login_count');
 CALL varam_add_index('users', 'idx_users_role_created', 'KEY idx_users_role_created (role, created_at)');
 
 -- ---------------------------------------------------------------------

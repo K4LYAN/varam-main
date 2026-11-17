@@ -3,33 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, follow">
   <meta name="theme-color" content="#7A2E1D">
+  <title>Create an account · Varam Cold-Pressed Oils</title>
+  <meta name="description" content="Create a free Varam account to save addresses, track orders and reorder cold-pressed oils in one tap.">
   <link rel="icon" href="/img/varam-logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&family=Caveat:wght@500;600&display=swap">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/effects.css">
   <link rel="stylesheet" href="/css/theme.css">
-  <title>Create account · Varam</title>
-  <meta name="robots" content="noindex">
 </head>
-<body>
+<body class="auth-page">
   <div id="site-header"></div>
-  <main id="main" class="auth-wrap">
-    <div class="auth-card">
-      <h1>Create your account</h1>
-      <p class="sub">Save your address, track orders and reorder in one click.</p>
+  <main id="main" class="auth-shell">
+    <aside class="auth-photo" aria-hidden="true">
+      <img src="https://images.unsplash.com/photo-1785619564649-658675821809?auto=format&fit=crop&w=900&q=70" alt="" loading="eager" width="900" height="1200">
+      <div class="auth-photo-note">
+        <p class="hand">“Good oil starts with good seeds — and a little patience.”</p>
+        <span>— the Varam family, Vijayawada</span>
+      </div>
+    </aside>
+
+    <section class="auth-panel" aria-labelledby="auth-title">
+      <p class="eyebrow"><span class="te" lang="te">నమస్కారం</span> Join the Varam family</p>
+      <h1 id="auth-title">Create your account</h1>
+      <p class="sub">Save your addresses, track every order and reorder in one tap. It takes less than a minute.</p>
+
       <form class="form" id="register-form" novalidate>
         <div class="form-error hidden" role="alert"></div>
-        <div class="field"><label for="name">Full name</label><input class="input" id="name" name="name" autocomplete="name" required></div>
-        <div class="field"><label for="email">Email</label><input class="input" id="email" name="email" type="email" autocomplete="email" required></div>
-        <div class="field"><label for="phone">Mobile number</label><input class="input" id="phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile" required></div>
-        <div class="field"><label for="password">Password</label><input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required><span class="muted" style="font-size:12px">At least 8 characters</span></div>
+        <div class="field"><label for="name">Full name</label><input class="input" id="name" name="name" autocomplete="name" required maxlength="120"></div>
+        <div class="field-row">
+          <div class="field"><label for="email">Email</label><input class="input" id="email" name="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" required></div>
+          <div class="field"><label for="phone">Mobile number</label><input class="input" id="phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile" required></div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pw-wrap">
+            <input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-rules">
+            <button class="pw-toggle" type="button" aria-label="Show password" aria-controls="password" aria-pressed="false">Show</button>
+          </div>
+          <div class="pw-meter" aria-hidden="true"><i></i></div>
+          <ul class="pw-rules" id="pw-rules">
+            <li data-rule="len">At least 8 characters</li>
+            <li data-rule="mix">A letter and a number</li>
+            <li data-rule="personal">Not your name, email or phone</li>
+          </ul>
+          <p class="caps hidden" role="status">Caps Lock is on</p>
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirm password</label>
+          <input class="input" id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required>
+        </div>
+        <label class="check"><input type="checkbox" name="acceptTerms" required> <span>I agree to receive order updates on WhatsApp/SMS and accept Varam's terms of sale.</span></label>
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
         <button class="btn btn-primary btn-block" type="submit">Create account</button>
       </form>
-      <p class="alt">Already have an account? <a href="/login">Sign in</a></p>
-    </div>
+
+      <p class="alt">Already have an account? <a href="/login" data-keep-next>Sign in</a></p>
+    </section>
   </main>
   <div id="site-footer"></div>
   <script src="/js/motion.js"></script>

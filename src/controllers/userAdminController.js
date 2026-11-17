@@ -36,6 +36,11 @@ async function resetPassword(req, res) {
   res.json(await userAdminService.resetPassword(ctx(req), id(req.params.id), validate.optionalPassword(req.body.password)));
 }
 
+/** Clear a lock from too many wrong passwords (same as a successful sign-in would). */
+async function unlock(req, res) {
+  res.json({ user: await userAdminService.unlock(ctx(req), id(req.params.id)) });
+}
+
 async function revokeSessions(req, res) {
   res.json({ user: await userAdminService.revokeSessions(ctx(req), id(req.params.id)) });
 }
@@ -45,4 +50,4 @@ async function remove(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { list, detail, create, update, setRole, setStatus, resetPassword, revokeSessions, remove };
+module.exports = { list, detail, create, update, setRole, setStatus, resetPassword, unlock, revokeSessions, remove };

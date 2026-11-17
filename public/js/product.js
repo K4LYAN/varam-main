@@ -26,8 +26,8 @@
   function render() {
     const s = state.settings || {};
     // Title, description, canonical and Product structured data are rendered on the server for search engines
-    $("#crumbs").innerHTML = `<a href="/">Home</a><span>/</span><a href="/#shop">Shop</a><span>/</span>${
-      product.category ? `<a href="/?category=${esc(product.category.slug)}#shop">${esc(product.category.name)}</a><span>/</span>` : ""
+    $("#crumbs").innerHTML = `<a href="/">Home</a><span>/</span><a href="/shop">Shop</a><span>/</span>${
+      product.category ? `<a href="/shop?category=${esc(product.category.slug)}">${esc(product.category.name)}</a><span>/</span>` : ""
     }<span aria-current="page">${esc(product.name)}</span>`;
 
     $("#pdp").innerHTML = `
@@ -220,7 +220,7 @@
       M?.init();
       watchSticky();
     } catch (err) {
-      $("#pdp").innerHTML = `<div class="empty" style="grid-column:1/-1"><h1>Product not found</h1><p class="muted" style="margin:8px 0 16px">${esc(err.message)}</p><a class="btn btn-primary" href="/#shop">Back to shop</a></div>`;
+      $("#pdp").innerHTML = `<div class="empty" style="grid-column:1/-1"><h1>Product not found</h1><p class="muted" style="margin:8px 0 16px">${esc(err.message)}</p><a class="btn btn-primary" href="/shop">Back to shop</a></div>`;
     }
   });
 })();

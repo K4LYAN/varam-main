@@ -11,6 +11,7 @@ const validate = require("../validators");
 const { clean } = require("../utils/validate");
 const seo = require("../utils/seo");
 const { faqFor } = require("../content/faq");
+const photos = require("../content/photos");
 
 const VIEWS = path.join(config.root, "views");
 const send = (res, ...parts) => res.sendFile(path.join(VIEWS, ...parts));
@@ -41,6 +42,18 @@ function faqItems(list, { idPrefix = "faq" } = {}) {
     .join("");
 }
 
+/** Category tiles with photos — links work without JavaScript; shop.js filters in place. */
+function categoryTiles(categories, { linkBase = "/shop" } = {}) {
+  const e = seo.esc;
+  return categories
+    .map(
+      (c) => `<a class="cat-tile" role="listitem" href="${linkBase}?category=${encodeURIComponent(c.slug)}" data-cat="${e(c.slug)}">
+        <img src="${e(photos.categoryPhoto(c.slug, 360, 270))}" alt="${e(c.name)}" loading="lazy" width="360" height="270">
+        <span><b>${e(c.name)}</b><small>${c.count} product${c.count === 1 ? "" : "s"}</small></span></a>`,
+    )
+    .join("");
+}
+
 const HOME_TITLE = "Cold-Pressed Oils Online | Wood-Pressed Groundnut, Sesame & Coconut Oil – Varam";
 const HOME_DESC =
   "Buy traditional cold-pressed (wood-pressed, gaanuga) groundnut, sesame, coconut, mustard and castor oils, pure ghee and honey from Varam, Vijayawada. Delivery across India and worldwide.";
@@ -54,8 +67,43 @@ async function home(_req, res) {
       CONTACT_BLOCK: contactBlock(s),
       FAQ_TEASER: faqItems(faq.filter((f) => f.featured).slice(0, 4), { idPrefix: "q" }),
       STORE_ADDRESS: seo.esc(s.store_address),
+      CATEGORY_TILES: categoryTiles((await catalogService.activeCatalog()).categories),
+      PHOTO_HERO: photos.photo("hero", 900, 1100),
+      PHOTO_SEEDS: photos.photo("seeds", 640, 420),
+      PHOTO_PRESSING: photos.photo("pressing", 640, 420),
+      PHOTO_SETTLED: photos.photo("settled", 640, 420),
+      PHOTO_KITCHEN: photos.photo("kitchen", 900, 700),
       STORE_HOURS: seo.esc(s.store_hours),
     },
+  });
+}
+
+async function shop(req, res) {
+  const { products, categories } = await catalogService.activeCatalog();
+  const cat = categories.find((c) => c.slug === String(req.query.category || ""));
+  const title = cat
+    ? `${/oil/i.test(cat.name) ? "Cold-Pressed" : "Pure"} ${cat.name} – Buy Online | Varam`
+    : "Shop Cold-Pressed Oils, Ghee & Honey Online | Varam";
+  seo.render(res, "shop.html", {
+    seo: {
+      title,
+      description:
+        "Shop Varam's cold-pressed (wood-pressed) groundnut, sesame, coconut, mustard, sunflower and castor oils, pure ghee and honey. Pack sizes, live prices and delivery across India and worldwide.",
+      // Filtered views point search engines at the canonical category or the main shop page
+      path: cat ? `/shop?category=${encodeURIComponent(cat.slug)}` : "/shop",
+      jsonld: [
+        {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Varam cold-pressed oils, ghee and honey",
+          itemListElement: products
+            .filter((p) => !cat || p.category?.slug === cat.slug)
+            .map((p, i) => ({ "@type": "ListItem", position: i + 1, url: seo.absolute(`/product/${encodeURIComponent(p.slug)}`), name: p.name })),
+        },
+        seo.breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }]),
+      ],
+    },
+    blocks: { CATEGORY_TILES: categoryTiles(categories) },
   });
 }
 
@@ -102,7 +150,8 @@ async function product(req, res) {
         seo.productSchema(p),
         seo.breadcrumbSchema([
           { name: "Home", path: "/" },
-          ...(p.category ? [{ name: p.category.name, path: `/?category=${encodeURIComponent(p.category.slug)}#shop` }] : []),
+          { name: "Shop", path: "/shop" },
+          ...(p.category ? [{ name: p.category.name, path: `/shop?category=${encodeURIComponent(p.category.slug)}` }] : []),
           { name: p.name, path: `/product/${encodeURIComponent(p.slug)}` },
         ]),
       ],
@@ -156,6 +205,7 @@ async function sitemap(_req, res) {
   const today = new Date().toISOString().slice(0, 10);
   const urls = [
     ["/", "daily", "1.0"],
+    ["/shop", "daily", "0.9"],
     ["/faq", "monthly", "0.6"],
     ...slugs.map((s) => [`/product/${encodeURIComponent(s)}`, "weekly", "0.8"]),
   ]
@@ -164,4 +214,4 @@ async function sitemap(_req, res) {
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
 }
 
-module.exports = { view, home, faqPage, product, login, register, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };
+module.exports = { view, home, shop, faqPage, product, login, register, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };

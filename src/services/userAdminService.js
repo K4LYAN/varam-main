@@ -27,7 +27,12 @@ const ROLES = ["customer", "admin"];
 function generatePassword() {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
   const group = () => Array.from({ length: 4 }, () => alphabet[crypto.randomInt(alphabet.length)]).join("");
-  return `${group()}-${group()}-${group()}`;
+  const chars = `${group()}${group()}${group()}`.split("");
+  // Guarantee at least one letter and one digit so it meets the password rules
+  chars[crypto.randomInt(12)] = "23456789"[crypto.randomInt(8)];
+  if (!chars.some((c) => /[a-z]/.test(c))) chars[0] = "k";
+  const s = chars.join("");
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
 }
 
 const snapshot = (u) => ({
@@ -47,6 +52,7 @@ function shapeUser(u, stats = {}) {
     role: u.role,
     isActive: Boolean(u.is_active),
     mustChangePassword: Boolean(u.must_change_password),
+    lockedUntil: u.locked_until && new Date(u.locked_until) > new Date() ? u.locked_until : null,
     joinedAt: u.created_at,
     lastLoginAt: u.last_login_at,
     orders: Number(stats.orders || 0),
@@ -83,7 +89,7 @@ async function list({ q = "", role = "", status = "", page = 1 }) {
   const [[{ n }], users, [summary]] = await Promise.all([
     queryRaw(`SELECT COUNT(*) AS n FROM users u WHERE ${w}`, params),
     queryRaw(
-      `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.must_change_password, u.created_at, u.last_login_at
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.must_change_password, u.locked_until, u.created_at, u.last_login_at
        FROM users u WHERE ${w} ORDER BY u.role = 'admin' DESC, u.id DESC LIMIT ${PER_PAGE} OFFSET ${offset}`,
       params,
     ),
@@ -122,7 +128,7 @@ async function list({ q = "", role = "", status = "", page = 1 }) {
 
 async function detail(id) {
   const [u] = await query(
-    "SELECT id, name, email, phone, role, is_active, must_change_password, created_at, last_login_at, default_address, pincode FROM users WHERE id = ?",
+    "SELECT id, name, email, phone, role, is_active, must_change_password, locked_until, created_at, last_login_at, default_address, pincode FROM users WHERE id = ?",
     [id],
   );
   if (!u) throw notFound("User not found");
@@ -249,7 +255,11 @@ async function setStatus(ctx, id, isActive) {
     const u = await lockUser(conn, id);
     if (Boolean(u.is_active) === isActive) return;
     if (!isActive) await keepAnAdmin(conn, u);
-    await query(`UPDATE users SET is_active = ?${isActive ? "" : ", token_version = token_version + 1"} WHERE id = ?`, [isActive ? 1 : 0, id], conn);
+    await query(
+      `UPDATE users SET is_active = ?${isActive ? ", failed_login_count = 0, locked_until = NULL" : ", token_version = token_version + 1"} WHERE id = ?`,
+      [isActive ? 1 : 0, id],
+      conn,
+    );
     await auditService.record(conn, ctx, {
       action: isActive ? "user.enable" : "user.disable",
       entityType: "user",
@@ -269,10 +279,23 @@ async function resetPassword(ctx, id, password) {
   const hash = await bcrypt.hash(temporaryPassword, config.bcryptRounds);
   await transaction(async (conn) => {
     const u = await lockUser(conn, id);
-    await query("UPDATE users SET password_hash = ?, must_change_password = 1, token_version = token_version + 1 WHERE id = ?", [hash, id], conn);
+    await query(
+      "UPDATE users SET password_hash = ?, must_change_password = 1, token_version = token_version + 1, failed_login_count = 0, locked_until = NULL WHERE id = ?",
+      [hash, id],
+      conn,
+    );
     await auditService.record(conn, ctx, { action: "user.password_reset", entityType: "user", entityId: id, summary: u.email });
   });
   return { user: await detail(id), temporaryPassword: password ? null : temporaryPassword };
+}
+
+async function unlock(ctx, id) {
+  await transaction(async (conn) => {
+    const u = await lockUser(conn, id);
+    await query("UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?", [id], conn);
+    await auditService.record(conn, ctx, { action: "user.unlock", entityType: "user", entityId: id, summary: u.email });
+  });
+  return detail(id);
 }
 
 async function revokeSessions(ctx, id) {
@@ -296,4 +319,4 @@ async function remove(ctx, id) {
   });
 }
 
-module.exports = { list, detail, create, update, setRole, setStatus, resetPassword, revokeSessions, remove, generatePassword, ROLES };
+module.exports = { list, detail, create, update, setRole, setStatus, resetPassword, unlock, revokeSessions, remove, generatePassword, ROLES };

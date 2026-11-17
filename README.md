@@ -6,6 +6,9 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 - **Hosting:** MilesWeb cPanel → *Setup Node.js App* (Phusion Passenger). Starts with `node server.js`.
 - **Storefront:** hero, category filter + search, pack-size switching with live price/MRP, stock badges, process switcher, comparison table, reviews, store map, FAQ, wishlist hearts. Motion effects (scroll reveals, parallax, tilt, magnetic buttons, counters, fly-to-cart) come from a tiny Web Animations library (`public/js/motion.js`) and respect *prefers-reduced-motion*.
 - **Look & feel:** natural, traditional "gaanuga" theme (`public/css/theme.css`) — parchment paper, kumkum red, turmeric and curry-leaf green, Fraunces serif headings, Telugu accents and kolam motifs. The home page is short: hero, promises, shop, the ghani process, reviews, "order from anywhere" contact + store map, and an FAQ teaser.
+- **Shop page** (`/shop`): photo category tiles, filters (sidebar on desktop, bottom sheet on phones) for category, price and stock, search, sort, removable filter chips and shareable URLs. Product cards switch from **Add** to a − qty + stepper once the pack is in the cart and stay in sync with the cart drawer.
+- **Photos:** hero, process, category and sign-in photos are free-licence images from Unsplash (`src/content/photos.js`). Product cards show the product's own photo when uploaded in Admin → Products, otherwise a drawn bottle — upload real bottle photos there to replace them.
+- **Sign in / sign up:** account locks for 15 minutes after 5 wrong passwords (admins can unlock), passwords need a letter + number and can't be common or contain your name/email/phone, confirm-password + terms on sign-up, a hidden bot trap, show/hide password, Caps Lock warning, strength meter, and safe `?next=` redirects.
 - **FAQ page** (`/faq`): server-rendered from `src/content/faq.js` with topic filters and search; also feeds the home-page teaser and Google's FAQ rich results.
 - **SEO:** every public page is rendered with a title, meta description, canonical URL, hreflang, Open Graph/Twitter tags and JSON-LD (Store with address, phones, emails and service area; WebSite with site search; FAQPage; Product + BreadcrumbList). `sitemap.xml` lists home, FAQ and every product; login/account/cart pages are `noindex`.
 - **India & worldwide orders:** customers in India get delivery or free pickup with UPI / pay at store; customers abroad choose **Outside India** in the cart, enter country, international phone, email and postal code, and receive the shipping charge + a secure payment link by email (orders store `country` and `customer_email`).
@@ -71,7 +74,7 @@ Strict layers: **routes** map URLs to **controllers** (HTTP only: parse input, c
 └── scripts/
     ├── check.js                   # syntax-check all JS
     ├── dev-db.js                  # local throwaway MySQL for development
-    └── smoke-test.js              # 36 end-to-end checks against real MySQL
+    └── smoke-test.js              # 38 end-to-end checks against real MySQL
 ```
 
 ### Database tables

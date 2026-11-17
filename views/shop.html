@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7A2E1D">
+  {{SEO_HEAD}}
+  <link rel="icon" href="/img/varam-logo.jpg">
+  <link rel="apple-touch-icon" href="/img/varam-logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&family=Caveat:wght@500;600&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/effects.css">
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body class="shop-page">
+  <div id="site-header"></div>
+
+  <main id="main">
+    <header class="page-hero shop-hero">
+      <div class="container">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span aria-current="page">Shop</span></nav>
+        <div class="shop-hero-row">
+          <div>
+            <p class="eyebrow"><span class="te" lang="te">మా దుకాణం</span> Our shop</p>
+            <h1>Cold-pressed oils, ghee &amp; honey</h1>
+            <p class="lead">Pressed in small batches in our wooden ghani in Vijayawada. Delivered across India and to other countries.</p>
+          </div>
+          <p class="hand shop-note" aria-hidden="true">pressed fresh every week ~</p>
+        </div>
+        <div class="cat-tiles" id="cat-tiles" role="list" aria-label="Shop by category">{{CATEGORY_TILES}}</div>
+      </div>
+    </header>
+
+    <section class="section shop-section" aria-label="Products">
+      <div class="container shop-layout">
+        <aside class="shop-filters" id="shop-filters" aria-label="Filters">
+          <div class="sf-head"><h2>Filters</h2><button class="icon-btn sf-close" type="button" data-close-filters aria-label="Close filters"></button></div>
+          <fieldset>
+            <legend>Category</legend>
+            <div id="f-category" class="sf-options"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Price</legend>
+            <div class="sf-options" id="f-price">
+              <label><input type="radio" name="price" value="all" checked> <span>Any price</span></label>
+              <label><input type="radio" name="price" value="0-500"> <span>Under ₹500</span></label>
+              <label><input type="radio" name="price" value="500-800"> <span>₹500 – ₹800</span></label>
+              <label><input type="radio" name="price" value="800-"> <span>₹800 and above</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Availability</legend>
+            <label class="sf-switch"><input type="checkbox" id="f-stock"> <span>In stock only</span></label>
+          </fieldset>
+          <div class="sf-foot">
+            <button class="btn btn-outline btn-sm" type="button" data-clear-filters>Clear all</button>
+            <button class="btn btn-primary btn-sm sf-apply" type="button" data-close-filters>Show <span id="sf-count">0</span> products</button>
+          </div>
+          <div class="sf-help">
+            <p class="hand">Not sure which oil?</p>
+            <p>Tell us what you cook — we'll suggest the right one.</p>
+            <a class="btn btn-wa btn-sm" id="shop-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener"><span data-icon="wa"></span>Ask on WhatsApp</a>
+          </div>
+        </aside>
+        <div class="sf-backdrop" data-close-filters hidden></div>
+
+        <div class="shop-main">
+          <div class="shop-toolbar">
+            <label class="catalog-search"><span class="sr-only">Search products</span><span data-icon="search"></span>
+              <input type="search" id="shop-search" placeholder="Search groundnut, sesame, ghee…" autocomplete="off"></label>
+            <button class="btn btn-outline sf-open" type="button" id="open-filters" aria-controls="shop-filters" aria-expanded="false">Filters <span class="sf-badge hidden" id="sf-badge"></span></button>
+            <label class="sort"><span class="sr-only">Sort products</span>
+              <select class="select" id="shop-sort">
+                <option value="featured">Featured</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="name">Name A–Z</option>
+              </select></label>
+          </div>
+          <div class="shop-status">
+            <p class="result-count" id="shop-count" aria-live="polite"></p>
+            <div class="active-chips" id="active-chips"></div>
+          </div>
+          <div class="grid shop-grid" id="shop-grid">
+            <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-paper shop-promise" aria-label="Why buy from Varam">
+      <div class="container">
+        <ul class="promise-row">
+          <li><span data-icon="drop"></span><b>Cold-pressed</b> in a wooden ghani</li>
+          <li><span data-icon="leaf"></span><b>Unrefined</b> — no bleach, no chemicals</li>
+          <li><span data-icon="truck"></span><b>India &amp; worldwide</b> delivery</li>
+          <li><span data-icon="store"></span><b>Free pickup</b> in Vijayawada</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/js/motion.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/catalog.js"></script>
+  <script src="/js/shop.js"></script>
+</body>
+</html>

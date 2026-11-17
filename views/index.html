@@ -9,7 +9,8 @@
   <link rel="apple-touch-icon" href="/img/varam-logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&display=swap">
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&family=Caveat:wght@500;600&display=swap">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/effects.css">
   <link rel="stylesheet" href="/css/theme.css">
@@ -27,18 +28,17 @@
           <h1 id="hero-title" data-split>Cold-Pressed Oils, <em>Pressed the Traditional Way</em></h1>
           <p class="lead" data-reveal="fade-up" data-delay="300">Seeds turned slowly in a wooden ghani, left to settle naturally and bottled unrefined — the pure taste and aroma our grandmothers cooked with.</p>
           <div class="ctas" data-reveal="fade-up" data-delay="450">
-            <a class="btn btn-primary shine" href="#shop" data-magnetic>Shop cold-pressed oils</a>
+            <a class="btn btn-primary shine" href="/shop" data-magnetic>Shop cold-pressed oils</a>
             <a class="btn btn-outline" data-magnetic id="hero-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener">Order on WhatsApp</a>
           </div>
           <p class="ships" data-reveal="fade-up" data-delay="600"><span data-icon="truck"></span><span>We accept orders from <b>all over India</b> and <b>other countries</b></span></p>
         </div>
-        <div class="hero-art" aria-hidden="true" data-reveal="scale-in" data-delay="200">
-          <div class="ghani-ring"></div>
-          <div class="bottles" id="hero-bottles" data-parallax="0.06"></div>
-          <svg class="sprig s1" viewBox="0 0 120 60"><path d="M4 56C34 44 64 30 116 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><g fill="currentColor"><ellipse cx="34" cy="40" rx="11" ry="5" transform="rotate(-38 34 40)"/><ellipse cx="54" cy="31" rx="11" ry="5" transform="rotate(32 54 31)"/><ellipse cx="74" cy="22" rx="11" ry="5" transform="rotate(-38 74 22)"/><ellipse cx="94" cy="14" rx="10" ry="4.5" transform="rotate(32 94 14)"/></g></svg>
-          <svg class="sprig s2" viewBox="0 0 120 60"><path d="M4 56C34 44 64 30 116 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><g fill="currentColor"><ellipse cx="34" cy="40" rx="11" ry="5" transform="rotate(-38 34 40)"/><ellipse cx="54" cy="31" rx="11" ry="5" transform="rotate(32 54 31)"/><ellipse cx="74" cy="22" rx="11" ry="5" transform="rotate(-38 74 22)"/></g></svg>
-          <div class="seal"><b>100%</b><span>unrefined</span></div>
-        </div>
+        <figure class="hero-photo" data-reveal="scale-in" data-delay="200">
+          <div class="arch"><img src="{{PHOTO_HERO}}" alt="Golden cold-pressed oil in a glass bottle on a wooden table" width="900" height="1100" fetchpriority="high"></div>
+          <svg class="sprig s1" aria-hidden="true" viewBox="0 0 120 60"><path d="M4 56C34 44 64 30 116 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><g fill="currentColor"><ellipse cx="34" cy="40" rx="11" ry="5" transform="rotate(-38 34 40)"/><ellipse cx="54" cy="31" rx="11" ry="5" transform="rotate(32 54 31)"/><ellipse cx="74" cy="22" rx="11" ry="5" transform="rotate(-38 74 22)"/><ellipse cx="94" cy="14" rx="10" ry="4.5" transform="rotate(32 94 14)"/></g></svg>
+          <div class="seal" aria-hidden="true"><b>100%</b><span>unrefined</span></div>
+          <figcaption class="hand">pressed slow, poured with care</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -52,29 +52,22 @@
       </div>
     </section>
 
-    <!-- Shop -->
+    <!-- Shop by category + bestsellers -->
     <section class="section" id="shop" aria-labelledby="shop-title">
       <div class="container">
         <div class="section-head center" data-reveal="blur-in">
-          <div><span class="kicker">Our range</span><h2 id="shop-title">Cold-pressed oils, ghee &amp; honey</h2><p>Choose a pack size — prices update instantly. Check out online or send your cart on WhatsApp.</p></div>
+          <div><span class="kicker">Our range</span><h2 id="shop-title">Shop by what you cook with</h2><p>Cold-pressed oils, pure ghee and natural honey — pick a category or start with our bestsellers.</p></div>
         </div>
-        <div class="catalog-tools" data-reveal="fade-up">
-          <div class="pills" id="category-pills" role="toolbar" aria-label="Filter by category"></div>
-          <label class="catalog-search"><span class="sr-only">Search the catalogue</span>
-            <span data-icon="search"></span>
-            <input type="search" id="catalog-search" placeholder="Search groundnut, sesame, ghee…" autocomplete="off"></label>
-          <label><span class="sr-only">Sort products</span>
-            <select class="select" id="catalog-sort">
-              <option value="featured">Featured</option>
-              <option value="price-asc">Price: low to high</option>
-              <option value="price-desc">Price: high to low</option>
-              <option value="name">Name A–Z</option>
-            </select></label>
+        <div class="cat-tiles" role="list" aria-label="Shop by category" data-reveal="fade-up">{{CATEGORY_TILES}}</div>
+
+        <div class="bestsellers-head">
+          <h3>Bestsellers</h3>
+          <a class="link-arrow" href="/shop">See all products →</a>
         </div>
-        <p class="result-count" id="result-count" aria-live="polite"></p>
         <div class="grid" id="product-grid">
           <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
         </div>
+        <p class="center" style="margin-top:26px"><a class="btn btn-outline" href="/shop">Browse the full shop</a></p>
       </div>
     </section>
 
@@ -84,11 +77,28 @@
         <div class="section-head center" data-reveal="blur-in">
           <div><span class="kicker">The ghani way</span><h2 id="process-title">From seed to bottle, slowly</h2></div>
         </div>
-        <ol class="ghani-steps" data-reveal data-stagger="120">
-          <li><span class="num">1</span><h3>Hand-picked seeds</h3><p>Groundnuts, sesame, coconut and mustard are cleaned and sorted before pressing.</p></li>
-          <li><span class="num">2</span><h3>Pressed cold in a wooden ghani</h3><p>The wooden ghani turns slowly, so the oil stays cool and keeps its natural aroma.</p></li>
-          <li><span class="num">3</span><h3>Settled &amp; bottled</h3><p>The oil rests, settles naturally and is filtered — never refined, bleached or deodorised.</p></li>
+        <ol class="ghani-steps with-photos" data-reveal data-stagger="120">
+          <li><img src="{{PHOTO_SEEDS}}" alt="Raw groundnuts in their shells" loading="lazy" width="640" height="420"><span class="num">1</span><h3>Hand-picked seeds</h3><p>Groundnuts, sesame, coconut and mustard are cleaned and sorted before pressing.</p></li>
+          <li><img src="{{PHOTO_PRESSING}}" alt="Fresh oil flowing from the press" loading="lazy" width="640" height="420"><span class="num">2</span><h3>Pressed cold in a wooden ghani</h3><p>The wooden ghani turns slowly, so the oil stays cool and keeps its natural aroma.</p></li>
+          <li><img src="{{PHOTO_SETTLED}}" alt="Golden oil resting in a vessel" loading="lazy" width="640" height="420"><span class="num">3</span><h3>Settled &amp; bottled</h3><p>The oil rests, settles naturally and is filtered — never refined, bleached or deodorised.</p></li>
         </ol>
+      </div>
+    </section>
+
+    <!-- A note from our kitchen -->
+    <section class="section kitchen-note" aria-labelledby="note-title">
+      <div class="container note-grid">
+        <figure class="polaroid" data-reveal="fade-up">
+          <img src="{{PHOTO_KITCHEN}}" alt="Fresh golden oil being poured into a steel vessel" loading="lazy" width="900" height="700">
+          <figcaption class="hand">for dosa, tadka, pulusu — everyday cooking</figcaption>
+        </figure>
+        <div class="note-card" data-reveal="fade-up" data-delay="150">
+          <span class="kicker">From our kitchen</span>
+          <h2 id="note-title">Oil the way it used to taste</h2>
+          <p>Fresh ghani oil has a smell you remember — the kind that makes a simple tadka fill the whole house. That is the oil we press.</p>
+          <p>Slowly pressed in a wooden ghani, left to settle and bottled unrefined. Visit our store on BRTS Road, Vijayawada to see, smell and taste the oils before you buy.</p>
+          <p class="hand signature">— with love, the Varam family</p>
+        </div>
       </div>
     </section>
 
@@ -141,6 +151,7 @@
   <div id="site-footer"></div>
   <script src="/js/motion.js"></script>
   <script src="/js/common.js"></script>
+  <script src="/js/catalog.js"></script>
   <script src="/js/home.js"></script>
 </body>
 </html>

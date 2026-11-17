@@ -7,6 +7,7 @@ const { requireUser, requireAdmin } = require("../middleware/auth");
 const router = express.Router();
 
 router.get("/", c.home);
+router.get("/shop", c.shop);
 router.get("/faq", c.faqPage);
 router.get("/product/:slug", c.product);
 router.get("/login", c.login);

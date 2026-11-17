@@ -9,29 +9,66 @@ const v = require("../utils/validate");
 const { normaliseItems } = require("../services/pricingService");
 const { FULFILLMENT_TYPES, PAYMENT_METHODS, HOME_COUNTRY, MAX_QTY } = require("../config/defaults");
 
-function password(value, field = "password", label = "Password") {
+// Passwords that appear at the top of every breach list (and obvious store-specific ones)
+const COMMON_PASSWORDS = new Set(
+  (
+    "password password1 password123 passw0rd 12345678 123456789 1234567890 11111111 00000000 12341234 87654321 " +
+    "qwerty123 qwertyuiop qwerty12 1q2w3e4r asdfghjk iloveyou iloveyou1 welcome1 welcome123 admin123 administrator " +
+    "abc12345 abcd1234 letmein1 monkey123 dragon123 sunshine1 princess1 football1 baseball1 superman1 india123 " +
+    "india@123 bharat123 hello123 test1234 testing123 changeme1 secret123 varam123 varam@123 varam12345 " +
+    "gaanuga123 vijayawada1 vijayawada123 sairam123 omsairam1 krishna123"
+  ).split(/\s+/),
+);
+
+/**
+ * Password rules: 8–200 characters, at least one letter and one number, not a
+ * well-known password, and not built from the person's own name, email or phone.
+ */
+function password(value, field = "password", label = "Password", context = {}) {
   const s = String(value || "");
   if (s.length < 8 || s.length > 200) throw new v.ValidationError(`${label} must be at least 8 characters`, field);
+  if (!/[A-Za-z]/.test(s) || !/\d/.test(s)) throw new v.ValidationError(`${label} must include at least one letter and one number`, field);
+  const lower = s.toLowerCase();
+  if (COMMON_PASSWORDS.has(lower) || /^(.)\1+$/.test(s)) throw new v.ValidationError(`${label} is too easy to guess — try a short phrase with a number`, field);
+  const personal = [
+    String(context.email || "").split("@")[0],
+    ...String(context.name || "").split(/\s+/),
+    String(context.phone || "").replace(/\D/g, "").slice(-10),
+  ]
+    .map((t) => t.toLowerCase())
+    .filter((t) => t.length >= 4);
+  if (personal.some((t) => lower.includes(t))) throw new v.ValidationError(`${label} must not contain your name, email or phone number`, field);
   return s;
 }
 
-const register = (b) => ({
-  name: v.str(b.name, "Name", { required: true, min: 2, max: 120 }),
-  email: v.email(b.email),
-  phone: v.phone(b.phone),
-  password: password(b.password),
-});
+/** Hidden "website" field: people never see or fill it, simple bots do. */
+function notABot(b) {
+  if (b && typeof b.website === "string" && b.website.trim() !== "") throw new v.ValidationError("Please try again", "form");
+}
+
+function register(b) {
+  notABot(b);
+  const name = v.str(b.name, "Name", { required: true, min: 2, max: 120 });
+  const email = v.email(b.email);
+  const phone = v.phone(b.phone);
+  if (b.confirmPassword !== undefined && String(b.confirmPassword) !== String(b.password || "")) {
+    throw new v.ValidationError("The two passwords don't match", "confirmPassword");
+  }
+  if (b.acceptTerms !== undefined && !v.bool(b.acceptTerms)) throw new v.ValidationError("Please accept the terms to continue", "acceptTerms");
+  return { name, email, phone, password: password(b.password, "password", "Password", { name, email, phone }) };
+}
 
 function login(b) {
+  notABot(b);
   const identifier = v.clean(b.identifier ?? b.email, 190).toLowerCase();
   const pw = String(b.password || "").slice(0, 200);
   if (!identifier || !pw) throw new v.ValidationError("Enter your email or phone and password", "identifier");
   return { identifier, password: pw, adminOnly: v.bool(b.adminOnly) };
 }
 
-const passwordChange = (b) => ({
+const passwordChange = (b, user = {}) => ({
   current: String(b.currentPassword || "").slice(0, 200),
-  next: password(b.newPassword, "newPassword", "New password"),
+  next: password(b.newPassword, "newPassword", "New password", user),
 });
 
 const profile = (b) => ({
@@ -220,17 +257,16 @@ const userDetails = (b) => ({
   phone: v.phone(b.phone, "Phone", false) || null,
 });
 
-function optionalPassword(value) {
+function optionalPassword(value, context = {}) {
   const s = String(value ?? "");
   if (!s) return null;
-  return password(s, "password", "Password");
+  return password(s, "password", "Password", context);
 }
 
-const userCreate = (b) => ({
-  ...userDetails(b),
-  role: v.oneOf(b.role || "customer", "Role", ["customer", "admin"]),
-  password: optionalPassword(b.password),
-});
+function userCreate(b) {
+  const details = userDetails(b);
+  return { ...details, role: v.oneOf(b.role || "customer", "Role", ["customer", "admin"]), password: optionalPassword(b.password, details) };
+}
 
 const userRole = (b) => v.oneOf(b.role, "Role", ["customer", "admin"]);
 
@@ -250,6 +286,7 @@ module.exports = {
   register,
   login,
   passwordChange,
+  password,
   profile,
   address,
   cartQuantity,

@@ -52,7 +52,8 @@ const json429 = (_req, res) => res.status(429).json({ error: "Too many attempts.
 const limiter = (windowMs, limit, extra = {}) => rateLimit({ windowMs, limit, standardHeaders: "draft-8", legacyHeaders: false, handler: json429, ...extra });
 
 // Note: the default store is in-memory per process; with several Passenger workers each keeps its own count.
-const loginLimiter = limiter(15 * 60 * 1000, 10, { skipSuccessfulRequests: true });
+// Per IP; each account also locks itself after 5 wrong passwords (authService)
+const loginLimiter = limiter(15 * 60 * 1000, 20, { skipSuccessfulRequests: true });
 const passwordLimiter = limiter(15 * 60 * 1000, 10);
 const registerLimiter = limiter(60 * 60 * 1000, 10);
 const orderLimiter = limiter(10 * 60 * 1000, 20);

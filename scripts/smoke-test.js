@@ -532,9 +532,9 @@ async function waitForServer(proc) {
       const login = await h("POST", "/api/auth/login", { identifier: "helper@example.com", password: helper.password });
       assert.equal(login.status, 200);
       assert.equal(login.data.user.mustChangePassword, true);
-      assert.equal((await h("POST", "/api/auth/password", { currentPassword: helper.password, newPassword: "helper-own-pass" })).data.user.mustChangePassword, false);
+      assert.equal((await h("POST", "/api/auth/password", { currentPassword: helper.password, newPassword: "tamarind-leaf-9" })).data.user.mustChangePassword, false);
       helper.client = h;
-      helper.password = "helper-own-pass";
+      helper.password = "tamarind-leaf-9";
       assert.equal((await cust("GET", "/api/admin/users")).status, 403);
     });
 
@@ -659,6 +659,39 @@ async function waitForServer(proc) {
       assert.match(inv.data, /Quoted by email/);
       // India orders still validate Indian numbers and reject the international payment method
       assert.equal((await guest("POST", "/api/orders", { ...base, country: "India", pincode: "520011", phone: "9876543210", paymentMethod: "INTL" })).status, 400);
+    });
+
+    await step("sign-up security: password rules, confirm, terms, bot trap; /shop page", async () => {
+      const base = { name: "Lakshmi Devi", email: "lakshmi@example.com", phone: "9000000077" };
+      const reg = (extra) => client()("POST", "/api/auth/register", { ...base, ...extra });
+      assert.equal((await reg({ password: "onlyletters" })).status, 400, "needs a number");
+      assert.equal((await reg({ password: "password123" })).status, 400, "common password");
+      assert.equal((await reg({ password: "lakshmi-2026" })).status, 400, "contains own name");
+      assert.equal((await reg({ password: "mango-tree-7", confirmPassword: "mango-tree-8" })).status, 400, "confirm mismatch");
+      assert.equal((await reg({ password: "mango-tree-7", acceptTerms: false })).status, 400, "terms");
+      assert.equal((await reg({ password: "mango-tree-7", website: "http://spam.example" })).status, 400, "honeypot");
+      const ok = await reg({ password: "mango-tree-7", confirmPassword: "mango-tree-7", acceptTerms: true });
+      assert.equal(ok.status, 201, JSON.stringify(ok.data));
+      const shop = await guest("GET", "/shop?category=ghee");
+      assert.equal(shop.status, 200);
+      assert.match(shop.data, /<title>Pure Ghee – Buy Online \| Varam<\/title>/);
+      assert.match(shop.data, /"@type":"ItemList"/);
+      assert.match(shop.data, /class="cat-tile"/);
+      assert.ok(!/\{\{[A-Z_]+\}\}/.test(shop.data));
+      assert.match((await guest("GET", "/")).data, /class="cat-tile"/);
+      assert.match((await guest("GET", "/sitemap.xml")).data, /\/shop<\/loc>/);
+    });
+
+    await step("account lockout: 5 wrong passwords lock the account; admin unlock clears it", async () => {
+      const who = { identifier: "lakshmi@example.com" };
+      for (let i = 0; i < 5; i++) assert.equal((await client()("POST", "/api/auth/login", { ...who, password: "wrong-pass-1" })).status, 401);
+      const locked = await client()("POST", "/api/auth/login", { ...who, password: "mango-tree-7" });
+      assert.equal(locked.status, 429, "even the right password waits");
+      assert.equal(locked.data.code, "ACCOUNT_LOCKED");
+      const u = (await admin("GET", "/api/admin/users?q=lakshmi%40example.com")).data.users[0];
+      assert.ok(u.lockedUntil, "admin sees the lock");
+      assert.equal((await admin("POST", `/api/admin/users/${u.id}/unlock`)).status, 200);
+      assert.equal((await client()("POST", "/api/auth/login", { ...who, password: "mango-tree-7" })).status, 200);
     });
 
     await step("logout clears the session", async () => {

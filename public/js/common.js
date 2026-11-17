@@ -385,7 +385,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
   /* ---------------- Header & footer ---------------- */
 
   const NAV = [
-    { href: "/#shop", label: "Shop Oils" },
+    { href: "/shop", label: "Shop Oils" },
     { href: "/#process", label: "Our Process" },
     { href: "/#store", label: "Contact & Store" },
     { href: "/faq", label: "FAQ" },
@@ -421,7 +421,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       ${s.announcement ? `<div class="announce">${esc(s.announcement)}</div>` : ""}
       <header class="site-header"><div class="container">
         <a class="brand" href="/" aria-label="Varam home"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
-        <nav class="main-nav" aria-label="Main">${NAV.map((n) => `<a href="${n.href}">${n.label}</a>`).join("")}</nav>
+        <nav class="main-nav" aria-label="Main">${NAV.map((n) => `<a href="${n.href}"${n.href === location.pathname ? ' aria-current="page"' : ""}>${n.label}</a>`).join("")}</nav>
         <div class="header-search" role="search">${I.search}
           <input type="search" id="site-search" placeholder="Search oils, ghee, honey…" autocomplete="off" aria-label="Search products" aria-controls="search-results">
           <div class="search-results hidden" id="search-results" role="listbox"></div></div>
@@ -457,7 +457,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       window.VARAM_HOME.search(term);
       document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
     } else {
-      location.href = "/?q=" + encodeURIComponent(term) + "#shop";
+      location.href = "/shop?q=" + encodeURIComponent(term);
     }
   }
 
@@ -509,7 +509,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const s = state.settings;
     const mount = $("#site-footer");
     if (!mount || !s) return;
-    const cats = (state.catalog?.categories || []).map((c) => `<li><a href="/?category=${esc(c.slug)}#shop">${esc(c.name)}</a></li>`).join("");
+    const cats = (state.catalog?.categories || []).map((c) => `<li><a href="/shop?category=${esc(c.slug)}">${esc(c.name)}</a></li>`).join("");
     mount.innerHTML = `<footer class="site-footer"><div class="container">
       <div class="cols">
         <div><a class="brand" href="/"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
@@ -597,19 +597,20 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const problem = !l.available || l.stock < l.quantity;
     const slug = l.slug || meta?.product.slug;
     return `<div class="line-item" data-line="${l.variantId}">
-      <a class="thumb" href="${slug ? `/product/${esc(slug)}` : "#"}" tabindex="-1">${visual}</a>
-      <div class="info">${slug ? `<a class="name" href="/product/${esc(slug)}"><b>${esc(name)}</b></a>` : `<b>${esc(name)}</b>`}
+      <a class="thumb" href="${slug ? `/product/${esc(slug)}` : "#"}" tabindex="-1" aria-hidden="true">${visual}</a>
+      <div class="info">
+        <div class="li-top">${slug ? `<a class="name" href="/product/${esc(slug)}"><b>${esc(name)}</b></a>` : `<b>${esc(name)}</b>`}
+          <button class="li-remove" type="button" data-remove="${l.variantId}" aria-label="Remove ${esc(name)} from cart">${I.close}</button></div>
         <div class="meta">${esc(l.sizeLabel || "")}${l.unitPrice ? ` · ${inr(l.unitPrice)} each${l.mrp > l.unitPrice ? `<span class="mrp">${inr(l.mrp)}</span>` : ""}` : ""}</div>
         ${problem ? `<div class="warn">${esc(l.reason || "Unavailable")}</div>` : ""}
         <div class="controls">
           <div class="qty" role="group" aria-label="Quantity for ${esc(name)}">
-            <button type="button" data-qty="${l.variantId}" data-delta="-1" aria-label="Decrease">−</button>
-            <span>${l.quantity}</span>
-            <button type="button" data-qty="${l.variantId}" data-delta="1" aria-label="Increase" ${l.stock && l.quantity >= l.stock ? "disabled" : ""}>+</button>
+            <button type="button" data-qty="${l.variantId}" data-delta="-1" aria-label="${l.quantity <= 1 ? "Remove" : "Decrease"}">−</button>
+            <span aria-live="polite">${l.quantity}</span>
+            <button type="button" data-qty="${l.variantId}" data-delta="1" aria-label="Increase" ${(l.stock && l.quantity >= l.stock) || l.quantity >= 50 ? "disabled" : ""}>+</button>
           </div>
-          <b>${l.lineTotal ? inr(l.lineTotal) : ""}</b>
+          <b class="li-total">${l.lineTotal ? inr(l.lineTotal) : ""}</b>
         </div>
-        <button class="link-btn" type="button" data-remove="${l.variantId}">Remove</button>
       </div></div>`;
   }
 
@@ -622,7 +623,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     let foot = "";
 
     if (!Cart.items.length) {
-      body = `<div class="empty" style="margin-top:24px;border:0"><div class="empty-art">${I.bag}</div><h3>Your cart is empty</h3><p class="muted" style="margin:6px 0 16px">Add some cold-pressed goodness.</p><a class="btn btn-primary" href="/#shop" data-close>Shop Oils</a></div>${upsellHtml()}`;
+      body = `<div class="empty" style="margin-top:24px;border:0"><div class="empty-art">${I.bag}</div><h3>Your cart is empty</h3><p class="muted" style="margin:6px 0 16px">Add some cold-pressed goodness.</p><a class="btn btn-primary" href="/shop" data-close>Shop Oils</a></div>${upsellHtml()}`;
     } else if (drawerStep === "checkout") {
       const u = state.user || {};
       const pickup = Cart.prefs.fulfillment === "pickup";
@@ -670,6 +671,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       body =
         lines.map(lineView).join("") +
         (saved > 0 ? `<div class="savings">You save ${inr(saved)} on MRP with this order 🎉</div>` : "") +
+        `<div class="cart-links"><a class="link-btn" href="/shop" data-close>← Continue shopping</a><button class="link-btn" type="button" data-clear-cart>Clear cart</button></div>` +
         upsellHtml();
       const pct = q && q.freeDeliveryThreshold ? Math.min(100, Math.round((q.subtotal / q.freeDeliveryThreshold) * 100)) : 0;
       foot = `<div class="seg seg-3" role="group" aria-label="Fulfilment">
@@ -682,8 +684,9 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
             ? `<div class="progress">${q.amountToFreeDelivery > 0 ? `Add <b>${inr(q.amountToFreeDelivery)}</b> more for free delivery` : "<b>You've unlocked free delivery!</b>"}<div class="bar"><i style="width:${pct}%"></i></div></div>`
             : ""
         }
-        <form class="coupon" data-coupon-form><input name="code" placeholder="Coupon code" aria-label="Coupon code" value="${esc(Cart.prefs.couponCode)}" maxlength="40">
-          ${Cart.prefs.couponCode ? `<button class="btn btn-outline btn-sm" type="button" data-coupon-remove>Remove</button>` : `<button class="btn btn-dark btn-sm" type="submit">Apply</button>`}</form>
+        <details class="coupon-wrap"${Cart.prefs.couponCode ? " open" : ""}><summary>Have a coupon code?</summary>
+        <form class="coupon" data-coupon-form><input name="code" placeholder="Coupon code" aria-label="Coupon code" value="${esc(Cart.prefs.couponCode)}" maxlength="40" autocapitalize="characters">
+          ${Cart.prefs.couponCode ? `<button class="btn btn-outline btn-sm" type="button" data-coupon-remove>Remove</button>` : `<button class="btn btn-dark btn-sm" type="submit">Apply</button>`}</form></details>
         ${
           q && Cart.prefs.couponCode
             ? q.couponCode
@@ -782,6 +785,10 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       const meta = findVariant(id);
       toast(`${meta ? meta.product.name : "Item"} removed`, { action: { label: "Undo", onClick: () => guard(() => Cart.setQty(id, prevQty)) } });
       return;
+    }
+    if (t.hasAttribute("data-clear-cart")) {
+      if (!confirm("Remove everything from your cart?")) return;
+      return guard(() => Cart.clear());
     }
     if (t.dataset.upsell) return guard(() => Cart.add(Number(t.dataset.upsell), 1));
     if (t.dataset.fulfil) return Cart.setPref("fulfillment", t.dataset.fulfil);

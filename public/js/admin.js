@@ -646,7 +646,7 @@
   const statusBadge = (u) =>
     `<span class="tag ${u.isActive ? "tag-active" : "tag-disabled"}">${u.isActive ? "Active" : "Disabled"}</span>${
       u.mustChangePassword ? '<br><span class="muted" style="font-size:12px">Must change password</span>' : ""
-    }`;
+    }${u.lockedUntil ? `<br><span class="tag tag-disabled" title="Too many wrong passwords">Locked until ${new Date(u.lockedUntil).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>` : ""}`;
   const dateOnly = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "—");
 
   async function renderUsers() {
@@ -843,6 +843,7 @@
             <button class="btn btn-outline btn-sm" type="button" data-act="status">${u.isActive ? "Disable account" : "Enable account"}</button>
             <button class="btn btn-outline btn-sm" type="button" data-act="reset">Reset password</button>
             <button class="btn btn-outline btn-sm" type="button" data-act="revoke">Sign out everywhere</button>
+            ${u.lockedUntil ? '<button class="btn btn-outline btn-sm" type="button" data-act="unlock">Unlock account</button>' : ""}
             ${u.phone ? `<a class="btn btn-wa btn-sm" href="https://wa.me/91${esc(u.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
           </div>
           <div id="ud-result"></div>
@@ -902,6 +903,8 @@
         if (typed === null) return;
         const r = await run(() => api("POST", `/api/admin/users/${id}/reset-password`, { password: typed }), "Password reset — they've been signed out");
         if (r) $("#ud-result", m.el).innerHTML = r.temporaryPassword ? passwordNotice(r.temporaryPassword, u.email) : '<p class="muted">Password set. They must choose a new one at next sign-in.</p>';
+      } else if (act === "unlock") {
+        if (await run(() => api("POST", `/api/admin/users/${id}/unlock`), "Account unlocked")) refresh();
       } else if (act === "revoke") {
         if (!confirm(`Sign ${u.name} out on every device?`)) return;
         await run(() => api("POST", `/api/admin/users/${id}/revoke-sessions`), "Signed out everywhere");

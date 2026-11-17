@@ -32,6 +32,7 @@ router.put("/users/:id", users.update);
 router.patch("/users/:id/role", users.setRole);
 router.patch("/users/:id/status", users.setStatus);
 router.post("/users/:id/reset-password", passwordResetLimiter, users.resetPassword);
+router.post("/users/:id/unlock", users.unlock);
 router.post("/users/:id/revoke-sessions", users.revokeSessions);
 router.delete("/users/:id", users.remove);
 
