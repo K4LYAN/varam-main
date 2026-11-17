@@ -9,7 +9,7 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 - **Cart:** savings banner, "You may also like" upsells, remove with Undo, saved-address picker at checkout. Guests use `localStorage`; on login/register the guest cart is merged into MySQL (`/api/cart/merge`), so it follows the customer across devices.
 - **Checkout:** home delivery (free above the threshold, otherwise a delivery charge) or free store pickup · payment by **UPI** or **pay at the store** (pickup only) — cash on delivery is not offered · coupons (`VARAM10` = 10% off) · **Place order** (MySQL transaction creates the order, its items, and decrements stock) or **Order via WhatsApp** (`wa.me/917799228444`).
 - **Customer account** (`/account`): dashboard with member tier and stats, order tracker timeline, cancel pending orders (stock is restored), reorder, printable invoices (`/invoice/:orderNumber`), address book (up to 10, default address), wishlist, profile and password change with a strength meter.
-- **Admin** (`/admin`): KPIs, 14-day sales chart, order-status pills, top products, low-stock quick restock, customers list (orders, total spent, WhatsApp), orders CSV export, products with inline per-pack-size price / MRP / SKU / stock editing, image upload, orders manager (filters, status updates, packing slip, WhatsApp update), coupons and store settings.
+- **Admin** (`/admin`): KPIs, 14-day sales chart, order-status pills, top products, low-stock quick restock, user management (customers + admins: roles, disable, password reset, sign-out everywhere), orders CSV export, products with inline per-pack-size price / MRP / SKU / stock editing, image upload, orders manager (filters, status updates, packing slip, WhatsApp update), coupons and store settings.
 
 ---
 
@@ -48,6 +48,7 @@ Strict layers: **routes** map URLs to **controllers** (HTTP only: parse input, c
 │   │   ├── accountService.js      # profile, address book, wishlist
 │   │   ├── authService.js         # register, login, password change
 │   │   ├── adminService.js        # dashboard figures, customers
+│   │   ├── userAdminService.js    # user management (roles, disable, password reset, delete)
 │   │   ├── auditService.js        # admin_audit_logs
 │   │   ├── invoiceService.js      # HMAC-signed invoice links
 │   │   ├── uploadService.js       # image magic-byte check + save
@@ -65,7 +66,7 @@ Strict layers: **routes** map URLs to **controllers** (HTTP only: parse input, c
 └── scripts/
     ├── check.js                   # syntax-check all JS
     ├── dev-db.js                  # local throwaway MySQL for development
-    └── smoke-test.js              # 30 end-to-end checks against real MySQL
+    └── smoke-test.js              # 33 end-to-end checks against real MySQL
 ```
 
 ### Database tables
@@ -161,6 +162,7 @@ npm test           # 20 end-to-end checks against a fresh MySQL
 - **New pack sizes** (500ml, 2L Can, 5L Tin, 15L Bulk Tin…): fill the empty row under a product → **+ Add size**.
 - **Hide a product** without deleting: switch off *Active*.
 - **Orders:** Admin → *Orders* → click an order → change status. *Cancelled* returns the items to stock. *Send WhatsApp update* opens a pre-written message to the customer.
+- **Users** (Admin → *Users*): search and filter every account (customers and admins) with orders, total spent and last sign-in. **+ Add user** creates a customer or admin (leave the password empty to generate one, shown once). *Manage* lets you edit details, change role, disable/enable the account, reset the password, sign the user out everywhere, or delete the account (orders are kept). Users given a password by the store must choose their own at next sign-in. You can't disable, demote or delete your own account, and the store always keeps at least one active admin. Every action is in the activity log.
 - **Delivery charge / free-delivery threshold / announcement / UPI ID / Google rating / testimonials:** Admin → *Coupons & settings*.
 
 ## Content notes

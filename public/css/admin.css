@@ -553,3 +553,26 @@ body.admin {
 #coupon-body input[name="usageLimit"] { min-width: 84px; }
 #coupon-body input[name="expiresAt"] { min-width: 140px; }
 #coupon-body td:last-child { white-space: nowrap; }
+
+/* ---------------- Users ---------------- */
+.user-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.user-kpi { text-align: left; cursor: pointer; font: inherit; border: 1px solid #e5e7eb; }
+.user-kpi.on { border-color: #d92d20; box-shadow: 0 0 0 3px #fff1f2; }
+@media (max-width: 700px) { .user-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+.tag-admin { background: #fef3c7; color: #92400e; }
+.tag-customer { background: #eef2ff; color: #3730a3; }
+.tag-active { background: #ecfdf3; color: #067647; }
+.tag-disabled { background: #fef3f2; color: #b42318; }
+.tag-you { background: #111827; color: #fff; }
+.row-muted td { opacity: .6; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.user-detail .ud-h { font-size: 15px; margin: 20px 0 10px; }
+.ud-actions { display: grid; gap: 12px; }
+.ud-actions .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.danger-zone { justify-content: space-between; border-top: 1px solid #f3f4f6; padding-top: 12px; }
+.btn-danger { background: #b42318; color: #fff; border-color: #b42318; }
+.btn-danger:hover { background: #912018; }
+.temp-pw { display: grid; gap: 10px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
+.temp-pw-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.temp-pw code { font-size: 18px; letter-spacing: .04em; background: #fff; border: 1px dashed #f59e0b; border-radius: 8px; padding: 6px 12px; user-select: all; }

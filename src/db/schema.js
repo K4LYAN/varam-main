@@ -26,6 +26,8 @@ const TABLES = [
     pincode VARCHAR(10) NULL,
     token_version INT UNSIGNED NOT NULL DEFAULT 0,
     must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    last_login_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_users_email (email),
     KEY idx_users_phone (phone),
@@ -213,6 +215,8 @@ const TABLES = [
 const UPGRADES = [
   { type: "column", table: "users", column: "token_version", ddl: "token_version INT UNSIGNED NOT NULL DEFAULT 0 AFTER pincode" },
   { type: "column", table: "users", column: "must_change_password", ddl: "must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER token_version" },
+  { type: "column", table: "users", column: "is_active", ddl: "is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER must_change_password" },
+  { type: "column", table: "users", column: "last_login_at", ddl: "last_login_at TIMESTAMP NULL DEFAULT NULL AFTER is_active" },
   { type: "index", table: "users", name: "idx_users_role_created", ddl: "KEY idx_users_role_created (role, created_at)" },
 
   { type: "column", table: "coupons", column: "usage_limit", ddl: "usage_limit INT UNSIGNED NULL AFTER min_order_amount" },

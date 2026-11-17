@@ -4,8 +4,9 @@ const express = require("express");
 const multer = require("multer");
 const config = require("../config");
 const c = require("../controllers/adminController");
+const users = require("../controllers/userAdminController");
 const { requireAdmin } = require("../middleware/auth");
-const { uploadLimiter } = require("../middleware/security");
+const { uploadLimiter, passwordLimiter: passwordResetLimiter } = require("../middleware/security");
 const { badRequest } = require("../utils/httpError");
 
 const router = express.Router();
@@ -22,6 +23,17 @@ const singleImage = (req, res, next) =>
 router.get("/stats", c.stats);
 router.get("/audit", c.audit);
 router.get("/customers", c.customers);
+
+// User management (customers + admins)
+router.get("/users", users.list);
+router.post("/users", users.create);
+router.get("/users/:id", users.detail);
+router.put("/users/:id", users.update);
+router.patch("/users/:id/role", users.setRole);
+router.patch("/users/:id/status", users.setStatus);
+router.post("/users/:id/reset-password", passwordResetLimiter, users.resetPassword);
+router.post("/users/:id/revoke-sessions", users.revokeSessions);
+router.delete("/users/:id", users.remove);
 
 router.get("/categories", c.listCategories);
 router.post("/categories", c.createCategory);

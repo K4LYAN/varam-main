@@ -102,13 +102,19 @@
     "/admin": ["dashboard", "Dashboard", renderDashboard],
     "/admin/products": ["products", "Products & prices", renderProducts],
     "/admin/orders": ["orders", "Orders", renderOrders],
-    "/admin/customers": ["customers", "Customers", renderCustomers],
+    "/admin/users": ["users", "Users", renderUsers],
+    "/admin/customers": ["users", "Users", renderUsers], // old link: opens Users filtered to customers
     "/admin/settings": ["settings", "Coupons & settings", renderSettings],
   };
 
   function navigate(fullPath, push = true) {
     const [path, qs] = fullPath.split("?");
     const route = ROUTES[path] || ROUTES["/admin"];
+    if (path === "/admin/customers") Object.assign(userQuery, { role: "customer", status: "", page: 1 });
+    if (path === "/admin/users" && qs !== undefined) {
+      const p = new URLSearchParams(qs);
+      Object.assign(userQuery, { role: p.get("role") || "", status: p.get("status") || "", q: p.get("q") || "", page: 1 });
+    }
     if (path === "/admin/orders" && qs !== undefined) {
       const p = new URLSearchParams(qs);
       orderQuery.status = p.get("status") || "";
@@ -178,7 +184,7 @@
         <div class="kpi"><span>Today's orders</span><b>${s.todayOrders}</b><span>${inr(s.todayRevenue)}</span></div>
         <div class="kpi red"><span>Pending orders</span><b>${s.pendingOrders}</b><a href="/admin/orders" data-nav class="link-btn">Review →</a></div>
         <div class="kpi warn"><span>Low-stock packs (≤ 5)</span><b>${s.lowStock.length}</b><a href="/admin/products" data-nav class="link-btn">Restock →</a></div>
-        <div class="kpi"><span>Customers</span><b>${s.totalCustomers}</b><a href="/admin/customers" data-nav class="link-btn">View →</a></div>
+        <div class="kpi"><span>Customers</span><b>${s.totalCustomers}</b><a href="/admin/users?role=customer" data-nav class="link-btn">View →</a></div>
       </div>
       <section class="a-panel">${salesChart(s.salesByDay)}
         <div class="status-pills" style="margin-top:16px">${Object.entries(s.statusCounts)
@@ -624,37 +630,283 @@
 
   /* ---------------- Customers ---------------- */
 
-  let customerQ = "";
-  async function renderCustomers() {
-    view.innerHTML = `<section class="a-panel">
-      <div class="head"><h2 id="cust-count">Customers</h2>
-        <div class="filters"><input class="input" type="search" id="cust-q" placeholder="Name, email or phone" value="${esc(customerQ)}" aria-label="Search customers"></div></div>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Phone</th><th>Joined</th><th>Orders</th><th>Spent</th><th>Last order</th><th></th></tr></thead><tbody id="cust-body"></tbody></table></div>
-    </section>`;
+  /* ---------------- Users (customers + admins) ---------------- */
+
+  let me = null; // the signed-in admin (set at boot)
+  const userQuery = { q: "", role: "", status: "", page: 1 };
+
+  const roleBadge = (u) => `<span class="tag ${u.role === "admin" ? "tag-admin" : "tag-customer"}">${u.role === "admin" ? "Admin" : "Customer"}</span>`;
+  const statusBadge = (u) =>
+    `<span class="tag ${u.isActive ? "tag-active" : "tag-disabled"}">${u.isActive ? "Active" : "Disabled"}</span>${
+      u.mustChangePassword ? '<br><span class="muted" style="font-size:12px">Must change password</span>' : ""
+    }`;
+  const dateOnly = (d) => (d ? new Date(d).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "—");
+
+  async function renderUsers() {
+    view.innerHTML = `
+      <div class="user-summary" id="user-summary"></div>
+      <section class="a-panel">
+        <div class="head"><h2 id="user-count">Users</h2>
+          <div class="filters">
+            <input class="input" type="search" id="user-q" placeholder="Name, email or phone" value="${esc(userQuery.q)}" aria-label="Search users">
+            <select class="select" id="user-role" aria-label="Role">
+              <option value="">All roles</option><option value="customer">Customers</option><option value="admin">Admins</option>
+            </select>
+            <select class="select" id="user-status" aria-label="Status">
+              <option value="">Any status</option><option value="active">Active</option><option value="disabled">Disabled</option>
+            </select>
+            <button class="btn btn-primary btn-sm" type="button" id="user-add">+ Add user</button>
+          </div></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>User</th><th>Phone</th><th>Role</th><th>Status</th><th>Orders</th><th>Spent</th><th>Joined</th><th>Last sign-in</th><th></th></tr></thead>
+          <tbody id="user-body"></tbody></table></div>
+        <div class="pager" id="user-pager"></div>
+      </section>`;
+    $("#user-role").value = userQuery.role;
+    $("#user-status").value = userQuery.status;
     let t;
-    $("#cust-q").addEventListener("input", (e) => {
+    $("#user-q").addEventListener("input", (e) => {
       clearTimeout(t);
       t = setTimeout(() => {
-        customerQ = e.target.value.trim();
-        loadCustomers();
+        userQuery.q = e.target.value.trim();
+        userQuery.page = 1;
+        loadUsers();
       }, 250);
     });
-    await loadCustomers();
+    $("#user-role").addEventListener("change", (e) => {
+      userQuery.role = e.target.value;
+      userQuery.page = 1;
+      loadUsers();
+    });
+    $("#user-status").addEventListener("change", (e) => {
+      userQuery.status = e.target.value;
+      userQuery.page = 1;
+      loadUsers();
+    });
+    $("#user-add").addEventListener("click", openNewUser);
+    $("#user-summary").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-preset]");
+      if (!b) return;
+      const [role, status] = b.dataset.preset.split(":");
+      Object.assign(userQuery, { role, status, page: 1 });
+      $("#user-role").value = role;
+      $("#user-status").value = status;
+      loadUsers();
+    });
+    $("#user-body").addEventListener("click", (e) => {
+      const tr = e.target.closest("tr[data-user]");
+      if (tr && !e.target.closest("a")) openUser(Number(tr.dataset.user)).catch((err) => toast(err.message, true));
+    });
+    $("#user-pager").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-page]");
+      if (!b) return;
+      userQuery.page = Number(b.dataset.page);
+      loadUsers();
+    });
+    await loadUsers();
   }
 
-  async function loadCustomers() {
-    const { customers } = await api("GET", `/api/admin/customers${customerQ ? `?q=${encodeURIComponent(customerQ)}` : ""}`);
-    $("#cust-count").textContent = `${customers.length} customer${customers.length === 1 ? "" : "s"}`;
-    $("#cust-body").innerHTML = customers.length
-      ? customers
+  async function loadUsers() {
+    const qs = new URLSearchParams(Object.entries(userQuery).filter(([, v]) => v !== "" && v !== null)).toString();
+    const r = await api("GET", `/api/admin/users?${qs}`);
+    const s = r.summary;
+    $("#user-summary").innerHTML = [
+      ["All users", s.total, ":"],
+      ["Customers", s.customers, "customer:"],
+      ["Admins", s.admins, "admin:"],
+      ["Disabled", s.disabled, ":disabled"],
+    ]
+      .map(([label, n, preset]) => {
+        const active = `${userQuery.role}:${userQuery.status}` === preset;
+        return `<button type="button" class="kpi user-kpi${active ? " on" : ""}" data-preset="${preset}"><span>${label}</span><b>${n}</b></button>`;
+      })
+      .join("");
+    $("#user-count").textContent = `${r.total} user${r.total === 1 ? "" : "s"}`;
+    $("#user-body").innerHTML = r.users.length
+      ? r.users
           .map(
-            (c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.email)}</span></td><td>${esc(c.phone || "—")}</td>
-              <td>${new Date(c.joinedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</td><td>${c.orders}</td><td><b>${inr(c.spent)}</b></td>
-              <td>${c.lastOrderAt ? dt(c.lastOrderAt) : "—"}</td>
-              <td>${c.phone ? `<a class="btn btn-wa btn-sm" href="https://wa.me/91${esc(c.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}</td></tr>`,
+            (u) => `<tr class="clickable${u.isActive ? "" : " row-muted"}" data-user="${u.id}">
+              <td><b>${esc(u.name)}</b>${me && me.id === u.id ? ' <span class="tag tag-you">You</span>' : ""}<br><span class="muted">${esc(u.email)}</span></td>
+              <td>${esc(u.phone || "—")}</td><td>${roleBadge(u)}</td><td>${statusBadge(u)}</td>
+              <td>${u.orders}</td><td><b>${inr(u.spent)}</b></td><td>${dateOnly(u.joinedAt)}</td><td>${u.lastLoginAt ? dt(u.lastLoginAt) : "Never"}</td>
+              <td><button class="btn btn-outline btn-sm" type="button">Manage</button></td></tr>`,
           )
           .join("")
-      : '<tr class="empty-row"><td colspan="7">No customers yet</td></tr>';
+      : '<tr class="empty-row"><td colspan="9">No users match these filters</td></tr>';
+    $("#user-pager").innerHTML =
+      r.pages > 1
+        ? `<button class="btn btn-outline btn-sm" type="button" data-page="${r.page - 1}" ${r.page <= 1 ? "disabled" : ""}>← Previous</button>
+           <span class="muted">Page ${r.page} of ${r.pages}</span>
+           <button class="btn btn-outline btn-sm" type="button" data-page="${r.page + 1}" ${r.page >= r.pages ? "disabled" : ""}>Next →</button>`
+        : "";
+  }
+
+  /** Shows a password exactly once, with a copy button. */
+  function passwordNotice(pw, who) {
+    return `<div class="temp-pw" role="status">
+      <div><b>Temporary password for ${esc(who)}</b><br><span class="muted">Shown only once. Share it privately — they'll be asked to set their own after signing in.</span></div>
+      <div class="temp-pw-row"><code id="temp-pw-value">${esc(pw)}</code><button class="btn btn-dark btn-sm" type="button" data-copy-pw>Copy</button></div>
+    </div>`;
+  }
+
+  function wireCopy(root) {
+    root.addEventListener("click", async (e) => {
+      if (!e.target.closest("[data-copy-pw]")) return;
+      const text = $("#temp-pw-value", root)?.textContent || "";
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Password copied");
+      } catch {
+        toast("Select the password and copy it manually", true);
+      }
+    });
+  }
+
+  function openNewUser() {
+    const m = modal(`<h2 style="font-size:22px;margin-bottom:6px">Add user</h2>
+      <p class="muted" style="margin-bottom:16px">Leave the password empty to generate one. New users are asked to choose their own password at first sign-in.</p>
+      <form class="grid-form" id="nu-form" novalidate>
+        <div class="field"><label for="nu-name">Name</label><input class="input" id="nu-name" name="name" required autocomplete="off"></div>
+        <div class="field"><label for="nu-email">Email</label><input class="input" id="nu-email" name="email" type="email" required autocomplete="off"></div>
+        <div class="field"><label for="nu-phone">Mobile (optional)</label><input class="input" id="nu-phone" name="phone" inputmode="numeric" autocomplete="off"></div>
+        <div class="field"><label for="nu-role">Role</label><select class="select" id="nu-role" name="role"><option value="customer">Customer</option><option value="admin">Admin (full access)</option></select></div>
+        <div class="field full"><label for="nu-pw">Password (optional, min 8)</label><input class="input" id="nu-pw" name="password" type="text" autocomplete="new-password" placeholder="Generate one for me"></div>
+        <div class="form-error hidden full" role="alert"></div>
+        <div class="full"><button class="btn btn-primary" type="submit">Create user</button></div>
+      </form><div id="nu-result"></div>`);
+    wireCopy(m.el);
+    $("#nu-form", m.el).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const err = $(".form-error", f);
+      err.classList.add("hidden");
+      if (f.role.value === "admin" && !confirm("Admins can change prices, orders, settings and other users. Create an admin account?")) return;
+      try {
+        const r = await api("POST", "/api/admin/users", {
+          name: f.name.value.trim(),
+          email: f.email.value.trim(),
+          phone: f.phone.value.trim(),
+          role: f.role.value,
+          password: f.password.value,
+        });
+        toast("User created");
+        f.remove();
+        $("#nu-result", m.el).innerHTML = r.temporaryPassword
+          ? passwordNotice(r.temporaryPassword, r.user.email)
+          : `<p>Account created for <b>${esc(r.user.email)}</b> with the password you entered.</p>`;
+        loadUsers().catch(() => {});
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove("hidden");
+      }
+    });
+  }
+
+  async function openUser(id) {
+    const { user: u } = await api("GET", `/api/admin/users/${id}`);
+    const self = me && me.id === u.id;
+    const m = modal(
+      `<div class="user-detail">
+        <div class="row" style="gap:10px;flex-wrap:wrap"><h2 style="font-size:22px">${esc(u.name)}</h2>${roleBadge(u)}<span id="ud-status">${statusBadge(u)}</span>${self ? '<span class="tag tag-you">You</span>' : ""}</div>
+        <dl class="dl">
+          <dt>Email</dt><dd>${esc(u.email)}</dd>
+          <dt>Mobile</dt><dd>${u.phone ? `<a href="tel:+91${esc(u.phone)}">${esc(u.phone)}</a>` : "—"}</dd>
+          <dt>Joined</dt><dd>${dateOnly(u.joinedAt)}</dd>
+          <dt>Last sign-in</dt><dd>${u.lastLoginAt ? dt(u.lastLoginAt) : "Never"}</dd>
+          <dt>Orders</dt><dd>${u.orders} · ${inr(u.spent)} spent${u.lastOrderAt ? ` · last ${dateOnly(u.lastOrderAt)}` : ""}</dd>
+          <dt>Saved</dt><dd>${u.addressCount} address${u.addressCount === 1 ? "" : "es"} · ${u.wishlistCount} wishlist item${u.wishlistCount === 1 ? "" : "s"}</dd>
+        </dl>
+
+        <h3 class="ud-h">Details</h3>
+        <form class="grid-form" id="ud-form" novalidate>
+          <div class="field"><label for="ud-name">Name</label><input class="input" id="ud-name" name="name" value="${esc(u.name)}"></div>
+          <div class="field"><label for="ud-email">Email</label><input class="input" id="ud-email" name="email" type="email" value="${esc(u.email)}"></div>
+          <div class="field"><label for="ud-phone">Mobile</label><input class="input" id="ud-phone" name="phone" inputmode="numeric" value="${esc(u.phone)}"></div>
+          <div class="field" style="align-self:end"><button class="btn btn-dark" type="submit">Save details</button></div>
+        </form>
+
+        <h3 class="ud-h">Access</h3>
+        ${
+          self
+            ? '<p class="muted">This is your own account. Change your password under <b>Coupons &amp; settings</b>; another admin manages your role and status.</p>'
+            : `<div class="ud-actions">
+          <div class="row"><label class="label" for="ud-role" style="margin:0">Role</label>
+            <select class="select" id="ud-role"><option value="customer" ${u.role === "customer" ? "selected" : ""}>Customer</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option></select>
+            <button class="btn btn-outline btn-sm" type="button" data-act="role">Change role</button></div>
+          <div class="row">
+            <button class="btn btn-outline btn-sm" type="button" data-act="status">${u.isActive ? "Disable account" : "Enable account"}</button>
+            <button class="btn btn-outline btn-sm" type="button" data-act="reset">Reset password</button>
+            <button class="btn btn-outline btn-sm" type="button" data-act="revoke">Sign out everywhere</button>
+            ${u.phone ? `<a class="btn btn-wa btn-sm" href="https://wa.me/91${esc(u.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+          </div>
+          <div id="ud-result"></div>
+          <div class="row danger-zone"><span class="muted">Deleting removes the account, cart, addresses and wishlist. Orders are kept for your records.</span>
+            <button class="btn btn-sm btn-danger" type="button" data-act="delete">Delete user</button></div>
+        </div>`
+        }
+
+        <h3 class="ud-h">Recent orders</h3>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>
+          ${
+            u.recentOrders.length
+              ? u.recentOrders
+                  .map((o) => `<tr class="clickable" data-open-order="${esc(o.orderNumber)}"><td><b>${esc(o.orderNumber)}</b></td><td>${dt(o.createdAt)}</td><td>${inr(o.totalAmount)}</td><td><span class="status ${statusClass(o.status)}">${esc(o.status)}</span></td></tr>`)
+                  .join("")
+              : '<tr class="empty-row"><td colspan="4">No orders yet</td></tr>'
+          }
+        </tbody></table></div>
+      </div>`,
+      { wide: true },
+    );
+    wireCopy(m.el);
+    const refresh = () => {
+      m.close();
+      loadUsers().catch(() => {});
+      openUser(id).catch(() => {});
+    };
+
+    $("#ud-form", m.el).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const ok = await run(() => api("PUT", `/api/admin/users/${id}`, { name: f.name.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim() }), "Details saved");
+      if (ok) loadUsers().catch(() => {});
+    });
+
+    m.el.addEventListener("click", async (e) => {
+      const orderRow = e.target.closest("[data-open-order]");
+      if (orderRow) {
+        m.close();
+        return openOrder(orderRow.dataset.openOrder).catch((err) => toast(err.message, true));
+      }
+      const b = e.target.closest("[data-act]");
+      if (!b) return;
+      const act = b.dataset.act;
+      if (act === "role") {
+        const role = $("#ud-role", m.el).value;
+        if (role === u.role) return toast("That is already their role");
+        const msg = role === "admin" ? `Give ${u.name} full admin access (prices, orders, settings, users)?` : `Remove admin access from ${u.name}?`;
+        if (!confirm(msg)) return;
+        if (await run(() => api("PATCH", `/api/admin/users/${id}/role`, { role }), "Role updated")) refresh();
+      } else if (act === "status") {
+        const next = !u.isActive;
+        if (!next && !confirm(`Disable ${u.name}? They are signed out now and can't sign in until you enable the account again.`)) return;
+        if (await run(() => api("PATCH", `/api/admin/users/${id}/status`, { isActive: next }), next ? "Account enabled" : "Account disabled")) refresh();
+      } else if (act === "reset") {
+        const typed = prompt(`New password for ${u.name} (min 8 characters).\nLeave empty to generate one.`, "");
+        if (typed === null) return;
+        const r = await run(() => api("POST", `/api/admin/users/${id}/reset-password`, { password: typed }), "Password reset — they've been signed out");
+        if (r) $("#ud-result", m.el).innerHTML = r.temporaryPassword ? passwordNotice(r.temporaryPassword, u.email) : '<p class="muted">Password set. They must choose a new one at next sign-in.</p>';
+      } else if (act === "revoke") {
+        if (!confirm(`Sign ${u.name} out on every device?`)) return;
+        await run(() => api("POST", `/api/admin/users/${id}/revoke-sessions`), "Signed out everywhere");
+      } else if (act === "delete") {
+        const typed = prompt(`This permanently deletes ${u.email}.\nType DELETE to confirm.`, "");
+        if (typed !== "DELETE") return typed === null ? undefined : toast("Not deleted — you didn't type DELETE", true);
+        if (await run(() => api("DELETE", `/api/admin/users/${id}`), "User deleted")) {
+          m.close();
+          loadUsers().catch(() => {});
+        }
+      }
+    });
   }
 
   /* ---------------- Coupons & settings ---------------- */
@@ -811,6 +1063,7 @@
         location.href = "/admin/login";
         return;
       }
+      me = user;
       $("#admin-email").textContent = user.email;
       navigate(location.pathname + location.search, false);
     } catch {

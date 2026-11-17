@@ -900,3 +900,6 @@
 
 /* Staggered reveal children (was injected by motion.js; CSP forbids inline <style>) */
 [data-reveal][data-stagger] > *{will-change:opacity,transform}
+
+/* Temporary password set by the store: ask the customer to choose their own */
+.pw-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;border-radius:14px;padding:14px 18px;margin:0 0 16px}

@@ -175,6 +175,40 @@ function settings(b) {
 
 const orderNumber = (value) => v.clean(value, 30);
 
+/* ---------------- Admin user management ---------------- */
+
+const userDetails = (b) => ({
+  name: v.str(b.name, "Name", { required: true, min: 2, max: 120 }),
+  email: v.email(b.email),
+  phone: v.phone(b.phone, "Phone", false) || null,
+});
+
+function optionalPassword(value) {
+  const s = String(value ?? "");
+  if (!s) return null;
+  return password(s, "password", "Password");
+}
+
+const userCreate = (b) => ({
+  ...userDetails(b),
+  role: v.oneOf(b.role || "customer", "Role", ["customer", "admin"]),
+  password: optionalPassword(b.password),
+});
+
+const userRole = (b) => v.oneOf(b.role, "Role", ["customer", "admin"]);
+
+function userStatus(b) {
+  if (b.isActive === undefined) throw new v.ValidationError("isActive is required", "isActive");
+  return v.bool(b.isActive);
+}
+
+const userListQuery = (q) => ({
+  q: v.clean(q.q, 60),
+  role: ["customer", "admin"].includes(q.role) ? q.role : "",
+  status: ["active", "disabled"].includes(q.status) ? q.status : "",
+  page: Math.max(1, Math.min(10000, Math.floor(Number(q.page) || 1))),
+});
+
 module.exports = {
   register,
   login,
@@ -192,4 +226,10 @@ module.exports = {
   coupon,
   settings,
   orderNumber,
+  userDetails,
+  userCreate,
+  userRole,
+  userStatus,
+  userListQuery,
+  optionalPassword,
 };

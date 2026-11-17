@@ -6,7 +6,7 @@ const config = require("../config");
 const { query } = require("../db/pool");
 const { conflict, unauthorized, forbidden } = require("../utils/httpError");
 
-const SESSION_COLUMNS = "id, name, email, phone, role, default_address, pincode, token_version, must_change_password, created_at";
+const SESSION_COLUMNS = "id, name, email, phone, role, default_address, pincode, token_version, must_change_password, is_active, created_at";
 
 // A real bcrypt hash of a random string, so a login for an unknown account costs the same time as a real one.
 let dummyHash = null;
@@ -27,11 +27,11 @@ function publicUser(u) {
   };
 }
 
-/** Load the user for a session; null if the account is gone or the token was revoked. */
+/** Load the user for a session; null if the account is gone, disabled, or the token was revoked. */
 async function findSessionUser(id, tokenVersion) {
   if (!Number.isInteger(id) || id <= 0) return null;
   const [u] = await query(`SELECT ${SESSION_COLUMNS} FROM users WHERE id = ? LIMIT 1`, [id]);
-  if (!u || Number(u.token_version) !== Number(tokenVersion)) return null;
+  if (!u || !u.is_active || Number(u.token_version) !== Number(tokenVersion)) return null;
   return u;
 }
 
@@ -64,7 +64,10 @@ async function login({ identifier, password, adminOnly }) {
   );
   const ok = await bcrypt.compare(password, user ? user.password_hash : await getDummyHash());
   if (!user || !ok) throw unauthorized("Incorrect email/phone or password");
+  // Checked only after the password, so a disabled account is not revealed to someone guessing
+  if (!user.is_active) throw forbidden("This account has been disabled. Please contact the store on WhatsApp.", "ACCOUNT_DISABLED");
   if (adminOnly && user.role !== "admin") throw forbidden("This account does not have admin access");
+  await query("UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?", [user.id]);
   delete user.password_hash;
   return user;
 }

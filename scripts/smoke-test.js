@@ -510,6 +510,94 @@ async function waitForServer(proc) {
       assert.equal((await phone2("GET", "/api/account/orders")).status, 401);
     });
 
+    await step("users: list + filters, create with generated password, must change it", async () => {
+      const all = await admin("GET", "/api/admin/users");
+      assert.equal(all.status, 200);
+      assert.ok(all.data.summary.admins >= 1 && all.data.summary.customers >= 1);
+      const admins = (await admin("GET", "/api/admin/users?role=admin")).data.users;
+      assert.ok(admins.every((u) => u.role === "admin"));
+      assert.ok(admins.some((u) => u.email === ADMIN.email && u.lastLoginAt), "admin sign-in time recorded");
+      const found = (await admin("GET", "/api/admin/users?q=cust%40example.com")).data.users;
+      assert.equal(found.length, 1);
+      assert.ok(found[0].orders >= 1);
+
+      const created = await admin("POST", "/api/admin/users", { name: "Shop Helper", email: "helper@example.com", phone: "9000000003", role: "customer" });
+      assert.equal(created.status, 201, JSON.stringify(created.data));
+      assert.match(created.data.temporaryPassword, /^[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/);
+      assert.equal(created.data.user.mustChangePassword, true);
+      globalThis.helper = { id: created.data.user.id, password: created.data.temporaryPassword };
+      const dupe = await admin("POST", "/api/admin/users", { name: "Dupe", email: "helper@example.com" });
+      assert.equal(dupe.status, 409);
+      const h = client();
+      const login = await h("POST", "/api/auth/login", { identifier: "helper@example.com", password: helper.password });
+      assert.equal(login.status, 200);
+      assert.equal(login.data.user.mustChangePassword, true);
+      assert.equal((await h("POST", "/api/auth/password", { currentPassword: helper.password, newPassword: "helper-own-pass" })).data.user.mustChangePassword, false);
+      helper.client = h;
+      helper.password = "helper-own-pass";
+      assert.equal((await cust("GET", "/api/admin/users")).status, 403);
+    });
+
+    await step("users: disable signs out + blocks login; enable; reset password; promote/demote", async () => {
+      const { id } = helper;
+      assert.equal((await admin("PATCH", `/api/admin/users/${id}/status`, { isActive: false })).data.user.isActive, false);
+      assert.equal((await helper.client("GET", "/api/auth/me")).data.user, null, "existing session ended");
+      const blocked = await client()("POST", "/api/auth/login", { identifier: "helper@example.com", password: helper.password });
+      assert.equal(blocked.status, 403);
+      assert.equal(blocked.data.code, "ACCOUNT_DISABLED");
+      await admin("PATCH", `/api/admin/users/${id}/status`, { isActive: true });
+      const h = client();
+      assert.equal((await h("POST", "/api/auth/login", { identifier: "helper@example.com", password: helper.password })).status, 200);
+
+      const reset = await admin("POST", `/api/admin/users/${id}/reset-password`, { password: "" });
+      assert.equal(reset.status, 200);
+      assert.ok(reset.data.temporaryPassword);
+      assert.equal((await h("GET", "/api/auth/me")).data.user, null, "reset signs the user out");
+      assert.equal((await client()("POST", "/api/auth/login", { identifier: "helper@example.com", password: helper.password })).status, 401);
+      assert.equal((await h("POST", "/api/auth/login", { identifier: "helper@example.com", password: reset.data.temporaryPassword })).status, 200);
+
+      assert.equal((await h("GET", "/api/admin/stats")).status, 403);
+      assert.equal((await admin("PATCH", `/api/admin/users/${id}/role`, { role: "admin" })).data.user.role, "admin");
+      const h2 = client();
+      await h2("POST", "/api/auth/login", { identifier: "helper@example.com", password: reset.data.temporaryPassword });
+      assert.equal((await h2("GET", "/api/admin/stats")).status, 200, "promoted user can use the admin API");
+      await admin("PATCH", `/api/admin/users/${id}/role`, { role: "customer" });
+      assert.equal((await h2("GET", "/api/admin/stats")).status, 401, "demotion ends the admin session");
+
+      const audit = (await admin("GET", "/api/admin/audit?entityType=user&limit=50")).data.entries.map((e) => e.action);
+      for (const a of ["user.create", "user.disable", "user.enable", "user.password_reset", "user.role"]) assert.ok(audit.includes(a), `missing ${a}`);
+    });
+
+    await step("users: admins can't disable, demote, reset or delete themselves; delete keeps orders", async () => {
+      const meId = (await admin("GET", "/api/auth/me")).data.user.id;
+      for (const [m, url, body] of [
+        ["PATCH", `/api/admin/users/${meId}/status`, { isActive: false }],
+        ["PATCH", `/api/admin/users/${meId}/role`, { role: "customer" }],
+        ["POST", `/api/admin/users/${meId}/reset-password`, {}],
+        ["DELETE", `/api/admin/users/${meId}`],
+      ]) {
+        const r = await admin(m, url, body);
+        assert.equal(r.status, 403, `${m} ${url}`);
+        assert.equal(r.data.code, "SELF_ACTION");
+      }
+      // Delete a customer who has an order: account goes, the order stays
+      const victim = (await admin("GET", "/api/admin/users?q=two%40example.com")).data.users[0];
+      const v = client();
+      await v("POST", "/api/auth/login", { identifier: "two@example.com", password: "second-pass-2" });
+      const o = await v("POST", "/api/orders", {
+        items: [{ variantId: vid("pure-castor-oil"), quantity: 1 }],
+        name: "Two Devices",
+        phone: "9000000002",
+        fulfillment: "pickup",
+        paymentMethod: "STORE",
+      });
+      assert.equal(o.status, 201);
+      assert.equal((await admin("DELETE", `/api/admin/users/${victim.id}`)).status, 200);
+      assert.equal((await admin("GET", `/api/admin/users/${victim.id}`)).status, 404);
+      assert.equal((await v("GET", "/api/auth/me")).data.user, null);
+      assert.equal((await admin("GET", `/api/admin/orders/${o.data.orderNumber}`)).status, 200, "order history kept");
+    });
+
     await step("logout clears the session", async () => {
       await cust("POST", "/api/auth/logout");
       assert.equal((await cust("GET", "/api/auth/me")).data.user, null);

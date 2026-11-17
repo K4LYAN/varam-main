@@ -45,6 +45,24 @@
     $("#c-orders").textContent = String(data.orders.length);
     $("#c-addresses").textContent = String(data.addresses.length);
     $("#c-wishlist").textContent = String(Wishlist.ids.size);
+    renderPasswordNotice();
+  }
+
+  /** Shown when the store set a temporary password for this account. */
+  function renderPasswordNotice() {
+    $("#pw-notice")?.remove();
+    if (!state.user.mustChangePassword) return;
+    const box = document.createElement("div");
+    box.id = "pw-notice";
+    box.className = "pw-notice";
+    box.setAttribute("role", "alert");
+    box.innerHTML = `<div><b>Please choose a new password.</b> Your password was set by the Varam team — pick your own to keep your account safe.</div>
+      <button class="btn btn-primary btn-sm" type="button" data-goto-profile>Change password</button>`;
+    box.querySelector("[data-goto-profile]").addEventListener("click", () => {
+      selectTab("profile");
+      setTimeout(() => $('[name="currentPassword"]')?.focus(), 450);
+    });
+    $("#tabs").before(box);
   }
 
   function countTo(el, to, fmt) {
@@ -336,7 +354,9 @@
       const err = $(".form-error", f);
       err.classList.add("hidden");
       try {
-        await api("POST", "/api/auth/password", { currentPassword: f.currentPassword.value, newPassword: f.newPassword.value });
+        const r = await api("POST", "/api/auth/password", { currentPassword: f.currentPassword.value, newPassword: f.newPassword.value });
+        if (r && r.user) state.user = r.user;
+        renderPasswordNotice();
         f.reset();
         $("#pw-bar").style.width = "0";
         toast("Password updated — other devices have been signed out");
@@ -451,6 +471,6 @@
     }
     renderHeaderArea();
     const fromHash = location.hash.slice(1);
-    selectTab(["overview", "orders", "addresses", "wishlist", "profile"].includes(fromHash) ? fromHash : "overview");
+    selectTab(["overview", "orders", "addresses", "wishlist", "profile"].includes(fromHash) ? fromHash : state.user.mustChangePassword ? "profile" : "overview");
   });
 })();
