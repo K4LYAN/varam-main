@@ -544,3 +544,12 @@ body.admin {
 .a-alert a{color:#b3261e;font-weight:700}
 .audit-diff{font-size:12.5px;line-height:1.5;min-width:220px}
 .audit-diff div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px}
+/* Coupons table: keep every field readable; the wrapper scrolls sideways on narrow screens */
+.tbl:has(#coupon-body) { min-width: 980px; }
+#coupon-body input[name="code"] { min-width: 120px; text-transform: uppercase; }
+#coupon-body select[name="discountType"] { min-width: 112px; padding: 0 26px 0 10px; }
+#coupon-body input[name="discountValue"],
+#coupon-body input[name="minOrderAmount"],
+#coupon-body input[name="usageLimit"] { min-width: 84px; }
+#coupon-body input[name="expiresAt"] { min-width: 140px; }
+#coupon-body td:last-child { white-space: nowrap; }
