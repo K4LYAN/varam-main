@@ -4,11 +4,12 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 
 - **Stack:** Node.js 18+ · Express 5 · MySQL (`mysql2/promise`, parameterised queries) · plain HTML/CSS/JavaScript (no build step)
 - **Hosting:** MilesWeb cPanel → *Setup Node.js App* (Phusion Passenger). Starts with `node server.js`.
-- **Storefront:** hero, category filter + search, pack-size switching with live price/MRP, stock badges, process switcher, comparison table, reviews, store map, FAQ.
-- **Cart:** guests use `localStorage`; on login/register the guest cart is merged into MySQL (`/api/cart/merge`), so it follows the customer across devices.
-- **Checkout:** home delivery (free above the threshold, otherwise a delivery charge) or free store pickup · coupons (`VARAM10` = 10% off) · **Place order** (MySQL transaction creates the order, its items, and decrements stock) or **Order via WhatsApp** (`wa.me/917799228444`).
-- **Customer account** (`/account`): order history, one-click reorder, saved address, printable invoices (`/invoice/:orderNumber`).
-- **Admin** (`/admin`): KPIs, products with inline per-pack-size price / MRP / SKU / stock editing, image upload, orders manager (filters, status updates, packing slip, WhatsApp update), coupons and store settings.
+- **Storefront:** hero, category filter + search, pack-size switching with live price/MRP, stock badges, process switcher, comparison table, reviews, store map, FAQ, wishlist hearts. Motion effects (scroll reveals, parallax, tilt, magnetic buttons, counters, fly-to-cart) come from a tiny Web Animations library (`public/js/motion.js`) and respect *prefers-reduced-motion*.
+- **Product page** (`/product/:slug`): pack sizes (`?size=`), quantity, live price with savings, stock, Add to cart / Buy now, WhatsApp enquiry, description/details/delivery tabs, related products, JSON-LD for Google.
+- **Cart:** savings banner, "You may also like" upsells, remove with Undo, saved-address picker at checkout. Guests use `localStorage`; on login/register the guest cart is merged into MySQL (`/api/cart/merge`), so it follows the customer across devices.
+- **Checkout:** home delivery (free above the threshold, otherwise a delivery charge) or free store pickup · payment by **UPI** or **pay at the store** (pickup only) — cash on delivery is not offered · coupons (`VARAM10` = 10% off) · **Place order** (MySQL transaction creates the order, its items, and decrements stock) or **Order via WhatsApp** (`wa.me/917799228444`).
+- **Customer account** (`/account`): dashboard with member tier and stats, order tracker timeline, cancel pending orders (stock is restored), reorder, printable invoices (`/invoice/:orderNumber`), address book (up to 10, default address), wishlist, profile and password change with a strength meter.
+- **Admin** (`/admin`): KPIs, 14-day sales chart, order-status pills, top products, low-stock quick restock, customers list (orders, total spent, WhatsApp), orders CSV export, products with inline per-pack-size price / MRP / SKU / stock editing, image upload, orders manager (filters, status updates, packing slip, WhatsApp update), coupons and store settings.
 
 ---
 
@@ -52,7 +53,7 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 ```
 
 ### Database tables
-`users`, `categories`, `products`, `product_variants`, `cart_items`, `orders`, `order_items`, `coupons`, `site_settings` — created automatically on every boot with `CREATE TABLE IF NOT EXISTS` (safe to re-run). Seed data is inserted only into an empty database; existing data and admin changes are never overwritten.
+`users`, `addresses`, `wishlist_items`, `categories`, `products`, `product_variants`, `cart_items`, `orders`, `order_items`, `coupons`, `site_settings` — created automatically on every boot with `CREATE TABLE IF NOT EXISTS` (safe to re-run). Seed data is inserted only into an empty database; existing data and admin changes are never overwritten.
 
 ---
 

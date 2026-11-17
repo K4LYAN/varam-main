@@ -37,7 +37,30 @@ router.get("/stats", async (_req, res) => {
       "SELECT order_number, customer_name, total_amount, status, fulfillment_type, created_at FROM orders ORDER BY id DESC LIMIT 8",
     ),
   ]);
+  const [daily, top, statusRows] = await Promise.all([
+    query(
+      `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS d, COUNT(*) AS n, COALESCE(SUM(total_amount),0) AS v
+       FROM orders WHERE status <> 'Cancelled' AND created_at >= CURDATE() - INTERVAL 13 DAY GROUP BY d ORDER BY d`,
+    ),
+    query(
+      `SELECT oi.product_name AS name, SUM(oi.quantity) AS qty, SUM(oi.line_total) AS revenue
+       FROM order_items oi JOIN orders o ON o.id = oi.order_id
+       WHERE o.status <> 'Cancelled' GROUP BY oi.product_name ORDER BY revenue DESC LIMIT 5`,
+    ),
+    query("SELECT status, COUNT(*) AS n FROM orders GROUP BY status"),
+  ]);
+  const byDay = new Map(daily.map((r) => [r.d, r]));
+  const salesByDay = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() + 5.5 * 3600 * 1000 - i * 86400000).toISOString().slice(0, 10); // IST calendar day
+    const r = byDay.get(d);
+    salesByDay.push({ date: d, orders: r ? Number(r.n) : 0, revenue: r ? Number(r.v) : 0 });
+  }
+
   res.json({
+    salesByDay,
+    topProducts: top.map((t) => ({ name: t.name, quantity: Number(t.qty), revenue: Number(t.revenue) })),
+    statusCounts: Object.fromEntries(ORDER_STATUSES.map((s) => [s, Number(statusRows.find((r) => r.status === s)?.n || 0)])),
     totalRevenue: Number(revenue.v),
     totalOrders: Number(revenue.n),
     todayOrders: Number(today.n),
@@ -240,6 +263,15 @@ router.put("/variants/:id", async (req, res) => {
   }
 });
 
+/** Quick restock from the dashboard. */
+router.patch("/variants/:id/stock", async (req, res) => {
+  const id = v.int(req.params.id, "id", { min: 1, max: 1e9 });
+  const stockQty = v.int(req.body.stockQty, "Stock", { min: 0, max: 1e6 });
+  const r = await query("UPDATE product_variants SET stock_qty = ? WHERE id = ?", [stockQty, id]);
+  if (!r.affectedRows) return res.status(404).json({ error: "Pack size not found" });
+  res.json({ ok: true, stockQty });
+});
+
 router.delete("/variants/:id", async (req, res) => {
   const id = v.int(req.params.id, "id", { min: 1, max: 1e9 });
   const [row] = await query("SELECT product_id FROM product_variants WHERE id = ?", [id]);
@@ -321,6 +353,88 @@ router.get("/orders", async (req, res) => {
       itemCount: Number(o.item_count),
       status: o.status,
       createdAt: o.created_at,
+    })),
+  });
+});
+
+/** Download filtered orders as CSV (opens in Excel / Google Sheets). */
+router.get("/orders.csv", async (req, res) => {
+  const where = ["1=1"];
+  const params = [];
+  if (ORDER_STATUSES.includes(req.query.status)) {
+    where.push("status = ?");
+    params.push(req.query.status);
+  }
+  if (["delivery", "pickup"].includes(req.query.fulfillment)) {
+    where.push("fulfillment_type = ?");
+    params.push(req.query.fulfillment);
+  }
+  const orders = await queryRaw(
+    `SELECT o.*, (SELECT GROUP_CONCAT(CONCAT(product_name, ' (', size_label, ') x', quantity) SEPARATOR '; ') FROM order_items WHERE order_id = o.id) AS items
+     FROM orders o WHERE ${where.join(" AND ")} ORDER BY o.id DESC LIMIT 5000`,
+    params,
+  );
+  // Prefix formula-like cells so spreadsheets never execute them
+  const cell = (v) => {
+    let s = String(v ?? "");
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const header = ["Order", "Date", "Status", "Customer", "Phone", "Fulfilment", "Address", "Pincode", "Payment", "Items", "Subtotal", "Discount", "Delivery", "Total", "Coupon"];
+  const lines = orders.map((o) =>
+    [
+      o.order_number,
+      new Date(o.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+      o.status,
+      o.customer_name,
+      o.customer_phone,
+      o.fulfillment_type,
+      o.delivery_address,
+      o.pincode,
+      o.payment_method,
+      o.items,
+      o.subtotal,
+      o.discount_amount,
+      o.delivery_fee,
+      o.total_amount,
+      o.coupon_code,
+    ]
+      .map(cell)
+      .join(","),
+  );
+  res.set("Content-Type", "text/csv; charset=utf-8");
+  res.set("Content-Disposition", `attachment; filename="varam-orders-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send("﻿" + [header.map(cell).join(","), ...lines].join("\r\n"));
+});
+
+/** Registered customers with order count and lifetime spend. */
+router.get("/customers", async (req, res) => {
+  const q = v.clean(req.query.q, 60);
+  const params = [];
+  let filter = "";
+  if (q) {
+    filter = "AND (u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  const rows = await queryRaw(
+    `SELECT u.id, u.name, u.email, u.phone, u.created_at,
+            COUNT(o.id) AS orders, COALESCE(SUM(CASE WHEN o.status <> 'Cancelled' THEN o.total_amount END),0) AS spent,
+            MAX(o.created_at) AS last_order
+     FROM users u LEFT JOIN orders o ON o.user_id = u.id
+     WHERE u.role = 'customer' ${filter}
+     GROUP BY u.id ORDER BY spent DESC, u.id DESC LIMIT 500`,
+    params,
+  );
+  res.json({
+    customers: rows.map((c) => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      joinedAt: c.created_at,
+      orders: Number(c.orders),
+      spent: Number(c.spent),
+      lastOrderAt: c.last_order,
     })),
   });
 });

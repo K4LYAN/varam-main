@@ -33,9 +33,11 @@
   function cardHtml(p) {
     const v = pickVariant(p);
     const save = v.mrp > v.price ? Math.round(((v.mrp - v.price) / v.mrp) * 100) : 0;
-    return `<article class="card" data-product="${p.id}" id="p-${esc(p.slug)}">
+    return `<article class="card" data-product="${p.id}" id="p-${esc(p.slug)}" data-tilt="5">
+      <a class="card-link" href="/product/${esc(p.slug)}" aria-label="View ${esc(p.name)}"></a>
       <div class="card-media">
         <div class="badges"><span>${p.badgeText ? `<span class="badge badge-brand">${esc(p.badgeText)}</span>` : ""}</span>${stockBadge(v)}</div>
+        <button class="heart" type="button" data-wish="${p.id}" aria-pressed="${window.Varam.Wishlist.has(p.id)}" aria-label="Save ${esc(p.name)} to wishlist">${I.heart}</button>
         ${productVisual(p, v.sizeLabel)}
       </div>
       <div class="card-body">
@@ -94,6 +96,14 @@
       ? list.map(cardHtml).join("")
       : `<div class="empty" style="grid-column:1/-1"><h3>No products found</h3><p class="muted" style="margin:6px 0 14px">Try another word or category.</p><button class="btn btn-outline" type="button" data-reset>Show all products</button></div>`;
     $$("#category-pills .pill").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.cat === view.category)));
+    // Staggered entrance (Framer-Motion-style) every time the grid re-filters
+    const M = window.VaramMotion;
+    if (M) {
+      $$("#product-grid .card").forEach((card, i) =>
+        M.animate(card, [{ opacity: 0, transform: "translateY(24px) scale(0.97)" }, { opacity: 1, transform: "none" }], { duration: 600, delay: Math.min(i, 8) * 60 }),
+      );
+      M.tilt($("#product-grid"));
+    }
   }
 
   function syncUrl() {
@@ -108,7 +118,7 @@
     renderPills(catalog.categories, catalog.products.length);
     $("#catalog-search").value = view.q;
     renderGrid();
-    $("#hero-products").textContent = String(catalog.products.length);
+    window.VaramMotion?.count($("#hero-products"), catalog.products.length);
     $("#hero-bottles").innerHTML = catalog.products
       .filter((p) => !/ghee|honey/i.test(p.name))
       .slice(0, 3)
@@ -152,16 +162,19 @@
       selected.set(productId, Number(sizeBtn.dataset.variant));
       const p = state.catalog.products.find((x) => x.id === productId);
       card.outerHTML = cardHtml(p);
-      document.querySelector(`[data-product="${productId}"] [data-variant="${sizeBtn.dataset.variant}"]`)?.focus();
+      const fresh = document.querySelector(`[data-product="${productId}"]`);
+      window.VaramMotion?.tilt(fresh.parentElement);
+      window.VaramMotion?.animate(fresh.querySelector(".price"), [{ opacity: 0.2, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 350 });
+      fresh.querySelector(`[data-variant="${sizeBtn.dataset.variant}"]`)?.focus();
       return;
     }
     const addBtn = e.target.closest("[data-add]");
     if (addBtn) {
       addBtn.disabled = true;
       try {
-        await Cart.add(Number(addBtn.dataset.add), 1);
-        const name = addBtn.closest(".card").querySelector("h3").textContent;
-        toast(`${name} added to cart`, { action: { label: "View cart", onClick: window.Varam.openDrawer } });
+        const card = addBtn.closest(".card");
+        const name = card.querySelector("h3").textContent;
+        await window.Varam.addToCart(addBtn.dataset.add, 1, card.querySelector(".card-media svg, .card-media img"), name);
       } catch (err) {
         toast(err.message, { error: true });
       } finally {
@@ -182,6 +195,7 @@
   };
 
   // Stock changes after an order → reload catalogue
+  window.addEventListener("varam:wishlist", () => window.Varam.Wishlist.paint());
   window.addEventListener("varam:catalog-stale", async () => {
     await loadCatalog();
     renderGrid();
@@ -263,7 +277,8 @@
         (t) => `<figure class="testimonial">${stars(t.rating || 5)}<p>“${esc(t.text)}”</p><footer>${esc(t.name)} <span>· ${esc(t.source || "Customer")}</span></footer></figure>`,
       )
       .join("");
-    $("#hero-rating").textContent = s.googleRating ? `${s.googleRating.toFixed(1)}★` : "—";
+    if (s.googleRating && window.VaramMotion) window.VaramMotion.count($("#hero-rating"), s.googleRating, 1, "", "★");
+    else $("#hero-rating").textContent = s.googleRating ? `${s.googleRating.toFixed(1)}★` : "—";
     $("#badge-rating").textContent = s.googleRating ? `${s.googleRating.toFixed(1)} on Google` : "Loved locally";
     $("#trust-delivery").textContent = s.freeDeliveryThreshold ? `Free delivery ${inr(s.freeDeliveryThreshold)}+` : "Home delivery";
   }
@@ -295,7 +310,7 @@
   const FAQ = [
     { cat: "Ordering", q: "How do I place an order?", a: "Add products to your cart, choose home delivery or free store pickup, and either place the order online or send it to us on WhatsApp in one tap. You'll get an order number and a printable invoice." },
     { cat: "Ordering", q: "Do I need an account to order?", a: "No — you can order as a guest. Creating an account saves your address, keeps your cart across devices and lets you reorder past orders in one click." },
-    { cat: "Ordering", q: "How do I pay?", a: "Choose UPI (we share payment details when we confirm your order), cash on delivery, or pay at the store when you pick up." },
+    { cat: "Ordering", q: "How do I pay?", a: "Pay by UPI — we share the payment details on WhatsApp when we confirm your order. For store pickup you can also pay at the store. Cash on delivery is not available." },
     { cat: "Ordering", q: "Do you take bulk or monthly orders?", a: "Yes. Families, restaurants, sweet shops and events can message us on WhatsApp for a bulk or monthly quote." },
     { cat: "Delivery", q: "What are the delivery charges?", a: "Home delivery is free on orders above the free-delivery amount shown in your cart; below that a small delivery charge applies. Store pickup is always free." },
     { cat: "Delivery", q: "Where is your store?", a: "BRTS Rd, Lakshmi Nagar, Satyaranayana Puram, Vijayawada 520011. Pickup orders can be collected during store hours." },

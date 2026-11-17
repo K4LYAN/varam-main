@@ -249,6 +249,66 @@ async function waitForServer(proc) {
       assert.equal(p.user.defaultAddress, "New address 520011");
     });
 
+    await step("cash on delivery is not accepted", async () => {
+      const r = await guest("POST", "/api/orders", {
+        items: [{ variantId: vid("pure-honey"), quantity: 1 }], name: "No Cod", phone: "9123456789", fulfillment: "delivery",
+        address: "1-2-3 Main Road, Vijayawada", pincode: "520011", paymentMethod: "COD",
+      });
+      assert.equal(r.status, 400);
+      assert.match(r.data.error, /payment method/i);
+    });
+
+    await step("product details API: product + related; unknown slug 404 page", async () => {
+      const r = (await guest("GET", "/api/products/pure-ghee")).data;
+      assert.equal(r.product.name, "Pure Ghee");
+      assert.equal(r.related.length, 4);
+      assert.equal((await guest("GET", "/product/pure-ghee")).status, 200);
+      assert.equal((await guest("GET", "/product/not-a-product")).status, 404);
+      assert.equal((await guest("GET", "/api/products/not-a-product")).status, 404);
+    });
+
+    await step("address book: add (first = default), add second as default, edit, delete", async () => {
+      let r = await cust("POST", "/api/account/addresses", { label: "Home", name: "Test Customer", phone: "9876543210", address: "12-3-45, Lakshmi Nagar, Vijayawada", pincode: "520011" });
+      assert.equal(r.status, 201, JSON.stringify(r.data));
+      assert.equal(r.data.addresses[0].isDefault, true);
+      r = await cust("POST", "/api/account/addresses", { label: "Office", name: "Test Customer", phone: "9876543210", address: "MG Road, Benz Circle, Vijayawada", pincode: "520010", isDefault: true });
+      assert.equal(r.data.addresses.length, 2);
+      const office = r.data.addresses.find((a) => a.label === "Office");
+      assert.equal(office.isDefault, true);
+      assert.equal(r.data.addresses.filter((a) => a.isDefault).length, 1);
+      assert.equal((await cust("GET", "/api/auth/me")).data.user.pincode, "520010");
+      r = await cust("PUT", `/api/account/addresses/${office.id}`, { ...office, address: "MG Road, Benz Circle, Vijayawada (2nd floor)", isDefault: true });
+      assert.match(r.data.addresses.find((a) => a.id === office.id).address, /2nd floor/);
+      r = await cust("DELETE", `/api/account/addresses/${office.id}`);
+      assert.equal(r.data.addresses.length, 1);
+      assert.equal(r.data.addresses[0].isDefault, true);
+      assert.equal((await guest("GET", "/api/account/addresses")).status, 401);
+    });
+
+    await step("wishlist: add, list, remove", async () => {
+      const ghee = catalog.products.find((p) => p.slug === "pure-ghee").id;
+      let r = (await cust("POST", `/api/account/wishlist/${ghee}`)).data;
+      assert.deepEqual(r.productIds, [ghee]);
+      await cust("POST", `/api/account/wishlist/${ghee}`); // idempotent
+      assert.equal((await cust("GET", "/api/account/wishlist")).data.productIds.length, 1);
+      r = (await cust("DELETE", `/api/account/wishlist/${ghee}`)).data;
+      assert.equal(r.productIds.length, 0);
+    });
+
+    await step("customer cancels a pending order → stock returned; confirmed orders can't be cancelled", async () => {
+      const stock = async () => (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-honey").variants[0].stockQty;
+      const before = await stock();
+      const o = await cust("POST", "/api/orders", { items: [{ variantId: vid("pure-honey"), quantity: 2 }], name: "Test Customer", phone: "9876543210", fulfillment: "pickup", paymentMethod: "UPI" });
+      assert.equal(o.status, 201, JSON.stringify(o.data));
+      assert.equal(await stock(), before - 2);
+      const c = await cust("POST", `/api/account/orders/${o.data.orderNumber}/cancel`);
+      assert.equal(c.status, 200, JSON.stringify(c.data));
+      assert.equal(await stock(), before);
+      assert.equal((await cust("POST", `/api/account/orders/${o.data.orderNumber}/cancel`)).status, 400);
+      assert.equal((await guest("POST", `/api/account/orders/${o.data.orderNumber}/cancel`)).status, 401);
+      // emptied the cart? (order placement clears the account cart) – restore cart state for later steps
+    });
+
     await step("login: wrong password rejected, customer cannot use admin login", async () => {
       assert.equal((await guest("POST", "/api/auth/login", { identifier: ADMIN.email, password: "wrong-password" })).status, 401);
       assert.equal((await client()("POST", "/api/auth/login", { identifier: "9876543210", password: "secret-pass-1", adminOnly: true })).status, 403);
@@ -263,6 +323,23 @@ async function waitForServer(proc) {
       assert.equal(s.pendingOrders, 2);
       assert.equal(s.totalCustomers, 1);
       assert.equal(s.totalRevenue, 3493);
+      assert.equal(s.salesByDay.length, 14);
+      assert.equal(s.salesByDay.at(-1).revenue, 3493);
+      assert.equal(s.topProducts[0].name, "Pure Ghee");
+      assert.equal(s.statusCounts.Cancelled, 1);
+    });
+
+    await step("admin: customers list + CSV export (formula-safe)", async () => {
+      const c = (await admin("GET", "/api/admin/customers")).data.customers;
+      assert.equal(c.length, 1);
+      assert.equal(c[0].orders, 2);
+      assert.equal(c[0].spent, 2493);
+      const csv = await admin("GET", "/api/admin/orders.csv");
+      assert.equal(csv.status, 200);
+      assert.match(csv.headers.get("content-type"), /text\/csv/);
+      assert.match(csv.data, /VRM-\d{4}-\d+/);
+      assert.equal((await guest("GET", "/api/admin/orders.csv")).status, 401);
+      assert.equal((await admin("GET", "/admin/customers")).status, 200);
     });
 
     await step("admin: inline price/MRP/stock edit goes live; add 5L Tin pack size", async () => {
@@ -281,6 +358,10 @@ async function waitForServer(proc) {
       assert.equal(live.variants[0].mrp, 420);
       assert.equal(live.variants[0].stockStatus, "low");
       assert.equal((await admin("GET", "/api/admin/stats")).data.lowStock.some((l) => l.variantId === v.id), true);
+      // quick restock from the dashboard
+      assert.equal((await admin("PATCH", `/api/admin/variants/${v.id}/stock`, { stockQty: 40 })).status, 200);
+      assert.equal((await admin("GET", "/api/admin/stats")).data.lowStock.some((l) => l.variantId === v.id), false);
+      assert.equal((await cust("PATCH", `/api/admin/variants/${v.id}/stock`, { stockQty: 0 })).status, 403);
     });
 
     await step("admin: create product with image upload; hide/feature toggles", async () => {
@@ -307,7 +388,9 @@ async function waitForServer(proc) {
 
     await step("admin: orders filter, status update, cancel restores stock, packing slip", async () => {
       const list = (await admin("GET", "/api/admin/orders?fulfillment=pickup")).data;
-      assert.equal(list.total, 1);
+      assert.equal(list.total, 2); // guest pickup + the customer's cancelled pickup order
+      const cancelled = (await admin("GET", "/api/admin/orders?status=Cancelled&fulfillment=pickup")).data;
+      assert.equal(cancelled.total, 1);
       const injection = (await admin("GET", "/api/admin/orders?q=" + encodeURIComponent("' OR 1=1 -- "))).data;
       assert.equal(injection.total, 0);
       const r = await admin("PUT", `/api/admin/orders/${orderNumber}/status`, { status: "Packed" });

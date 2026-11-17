@@ -46,9 +46,9 @@ router.post("/orders", orderLimiter, async (req, res) => {
   const name = v.str(req.body.name, "Name", { required: true, min: 2, max: 120 });
   const phone = v.phone(req.body.phone);
   const fulfillment = v.oneOf(req.body.fulfillment, "Fulfilment", ["delivery", "pickup"]);
-  const paymentMethod = v.oneOf(String(req.body.paymentMethod || "").toUpperCase(), "Payment method", ["UPI", "COD", "STORE"]);
+  // Cash on delivery is not offered: UPI for everyone, or pay at the store for pickups
+  const paymentMethod = v.oneOf(String(req.body.paymentMethod || "").toUpperCase(), "Payment method", ["UPI", "STORE"]);
   if (paymentMethod === "STORE" && fulfillment !== "pickup") throw new v.ValidationError("Pay at store is only available for store pickup", "paymentMethod");
-  if (paymentMethod === "COD" && fulfillment !== "delivery") throw new v.ValidationError("Cash on delivery is only available for home delivery", "paymentMethod");
   const address = fulfillment === "delivery" ? v.str(req.body.address, "Delivery address", { required: true, min: 8, max: 500 }) : null;
   const pincode = fulfillment === "delivery" ? v.pincode(req.body.pincode) : null;
   const notes = v.str(req.body.notes, "Notes", { max: 500 }) || null;

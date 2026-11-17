@@ -4,49 +4,50 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#D92D20">
+  <meta name="robots" content="noindex">
+  <title>My account · Varam</title>
   <link rel="icon" href="/img/varam-logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
   <link rel="stylesheet" href="/css/style.css">
-  <title>My account · Varam</title>
-  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/effects.css">
 </head>
 <body>
   <div id="site-header"></div>
-  <main id="main" class="container">
-    <div class="account-grid">
-      <section class="panel" aria-labelledby="orders-title">
-        <h2 id="orders-title">My orders</h2>
-        <div id="orders"><p class="muted">Loading your orders…</p></div>
-      </section>
-      <div style="display:grid;gap:24px">
-        <section class="panel" aria-labelledby="profile-title">
-          <h2 id="profile-title">Profile &amp; saved address</h2>
-          <form class="form" id="profile-form" novalidate>
-            <div class="form-error hidden" role="alert"></div>
-            <div class="field"><label for="p-name">Full name</label><input class="input" id="p-name" name="name" autocomplete="name" required></div>
-            <div class="field"><label for="p-email">Email</label><input class="input" id="p-email" disabled></div>
-            <div class="field"><label for="p-phone">Mobile number</label><input class="input" id="p-phone" name="phone" inputmode="tel" required></div>
-            <div class="field"><label for="p-address">Default delivery address</label><textarea class="input" id="p-address" name="defaultAddress" autocomplete="street-address"></textarea></div>
-            <div class="field"><label for="p-pin">Pincode</label><input class="input" id="p-pin" name="pincode" inputmode="numeric" maxlength="6"></div>
-            <button class="btn btn-primary" type="submit">Save changes</button>
-          </form>
-        </section>
-        <section class="panel" aria-labelledby="pw-title">
-          <h2 id="pw-title">Change password</h2>
-          <form class="form" id="password-form" novalidate>
-            <div class="form-error hidden" role="alert"></div>
-            <div class="field"><label for="pw-current">Current password</label><input class="input" id="pw-current" name="currentPassword" type="password" autocomplete="current-password" required></div>
-            <div class="field"><label for="pw-new">New password</label><input class="input" id="pw-new" name="newPassword" type="password" autocomplete="new-password" minlength="8" required></div>
-            <button class="btn btn-dark" type="submit">Update password</button>
-          </form>
-        </section>
-        <button class="btn btn-outline" type="button" id="logout">Sign out</button>
+  <main id="main">
+    <section class="acct-hero">
+      <div class="container">
+        <div class="avatar" id="avatar" aria-hidden="true">V</div>
+        <div>
+          <h1 id="hello" data-reveal="fade-up">Welcome back</h1>
+          <p id="member" data-reveal="fade-up" data-delay="100"></p>
+          <span class="tier" id="tier" data-reveal="fade-up" data-delay="180"></span>
+        </div>
       </div>
+    </section>
+
+    <div class="container acct-wrap">
+      <div class="acct-stats" id="stats" data-reveal data-stagger="80">
+        <div class="stat"><span>Orders</span><b>—</b></div>
+        <div class="stat"><span>Total spent</span><b>—</b></div>
+        <div class="stat"><span>Active orders</span><b>—</b></div>
+        <div class="stat"><span>Saved with coupons</span><b>—</b></div>
+      </div>
+
+      <div class="acct-tabs" role="tablist" aria-label="Account sections" id="tabs">
+        <button type="button" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+        <button type="button" role="tab" data-tab="orders" aria-selected="false">Orders <span class="count" id="c-orders">0</span></button>
+        <button type="button" role="tab" data-tab="addresses" aria-selected="false">Addresses <span class="count" id="c-addresses">0</span></button>
+        <button type="button" role="tab" data-tab="wishlist" aria-selected="false">Wishlist <span class="count" id="c-wishlist">0</span></button>
+        <button type="button" role="tab" data-tab="profile" aria-selected="false">Profile &amp; security</button>
+      </div>
+
+      <section role="tabpanel" id="panel" aria-live="polite"></section>
     </div>
   </main>
   <div id="site-footer"></div>
+  <script src="/js/motion.js"></script>
   <script src="/js/common.js"></script>
   <script src="/js/account.js"></script>
 </body>

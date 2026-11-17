@@ -14,6 +14,11 @@ const VIEWS = path.join(__dirname, "..", "..", "views");
 const view = (name) => (_req, res) => res.sendFile(path.join(VIEWS, name));
 
 router.get("/", view("index.html"));
+router.get("/product/:slug", async (req, res) => {
+  const rows = await query("SELECT id FROM products WHERE slug = ? AND is_active = 1 LIMIT 1", [v.clean(req.params.slug, 150)]);
+  if (!rows.length) return res.status(404).sendFile(path.join(VIEWS, "404.html"));
+  res.sendFile(path.join(VIEWS, "product.html"));
+});
 router.get("/login", (req, res) => (req.user ? res.redirect("/account") : res.sendFile(path.join(VIEWS, "login.html"))));
 router.get("/register", (req, res) => (req.user ? res.redirect("/account") : res.sendFile(path.join(VIEWS, "register.html"))));
 router.get("/account", requireUser, view("account.html"));
@@ -21,7 +26,7 @@ router.get("/account", requireUser, view("account.html"));
 router.get("/admin/login", (req, res) =>
   req.user?.role === "admin" ? res.redirect("/admin") : res.sendFile(path.join(VIEWS, "admin", "login.html")),
 );
-router.get(["/admin", "/admin/products", "/admin/orders", "/admin/settings"], requireAdmin, (_req, res) => {
+router.get(["/admin", "/admin/products", "/admin/orders", "/admin/customers", "/admin/settings"], requireAdmin, (_req, res) => {
   res.set("X-Robots-Tag", "noindex, nofollow");
   res.sendFile(path.join(VIEWS, "admin", "index.html"));
 });
@@ -56,8 +61,9 @@ router.get("/robots.txt", (_req, res) => {
   res.type("text/plain").send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /account\nDisallow: /invoice/\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
 });
 
-router.get("/sitemap.xml", (_req, res) => {
-  const urls = ["/", "/login", "/register"].map((u) => `<url><loc>${config.siteUrl}${u}</loc></url>`).join("");
+router.get("/sitemap.xml", async (_req, res) => {
+  const products = await query("SELECT slug FROM products WHERE is_active = 1 ORDER BY sort_order");
+  const urls = ["/", ...products.map((p) => `/product/${p.slug}`)].map((u) => `<url><loc>${config.siteUrl}${u}</loc></url>`).join("");
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
 });
 

@@ -33,7 +33,7 @@ async function loadUser(req, _res, next) {
   try {
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"], issuer: "varam" });
     const rows = await query(
-      "SELECT id, name, email, phone, role, default_address, pincode FROM users WHERE id = ? LIMIT 1",
+      "SELECT id, name, email, phone, role, default_address, pincode, created_at FROM users WHERE id = ? LIMIT 1",
       [Number(payload.sub)],
     );
     // Role is always read from the database, never trusted from the token alone

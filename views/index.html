@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/effects.css">
 </head>
 <body>
   <div id="site-header"></div>
@@ -22,24 +23,25 @@
   <main id="main">
     <!-- Hero -->
     <section class="hero">
+      <span class="orb o1" aria-hidden="true"></span><span class="orb o2" aria-hidden="true"></span><span class="orb o3" aria-hidden="true"></span>
       <div class="container">
         <div>
-          <span class="eyebrow">Gaanuga Nune · Vijayawada</span>
-          <h1>Pure Wood-Pressed Oils, <em>Made the Traditional Way</em></h1>
-          <p class="lead">Seeds pressed slowly in a traditional wooden ghani (mara chekku), then left to settle naturally before bottling — unrefined, with the real aroma of the seed.</p>
-          <div class="ctas">
-            <a class="btn btn-white" href="#shop">Shop Pure Oils</a>
-            <a class="btn btn-ghost-light" id="hero-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener">Order on WhatsApp</a>
+          <span class="eyebrow" data-reveal="fade-down">Gaanuga Nune · Vijayawada</span>
+          <h1 data-split>Pure Wood-Pressed Oils, <em>Made the Traditional Way</em></h1>
+          <p class="lead" data-reveal="fade-up" data-delay="350">Seeds pressed slowly in a traditional wooden ghani (mara chekku), then left to settle naturally before bottling — unrefined, with the real aroma of the seed.</p>
+          <div class="ctas" data-reveal="fade-up" data-delay="500">
+            <a class="btn btn-white shine" href="#shop" data-magnetic>Shop Pure Oils</a>
+            <a class="btn btn-ghost-light" data-magnetic id="hero-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener">Order on WhatsApp</a>
           </div>
-          <div class="facts">
+          <div class="facts" data-reveal="fade-up" data-delay="650">
             <span><b id="hero-rating">4.9★</b>Google rating</span>
             <span><b id="hero-products">9</b>Pantry staples</span>
             <span><b>₹0</b>Store pickup</span>
           </div>
         </div>
-        <div class="showcase" aria-hidden="true">
+        <div class="showcase" aria-hidden="true" data-reveal="scale-in" data-delay="200">
           <div class="glow"></div>
-          <div class="bottles" id="hero-bottles"></div>
+          <div class="bottles" id="hero-bottles" data-parallax="0.08"></div>
           <div class="float-badge b1"><span class="ic ic-green" data-icon="leaf"></span><span><b>Wood-pressed</b>Slow, traditional ghani</span></div>
           <div class="float-badge b2"><span class="ic ic-amber" data-icon="drop"></span><span><b>Unrefined</b>No bleaching or deodorising</span></div>
           <div class="float-badge b3"><span class="ic ic-red" data-icon="star"></span><span><b id="badge-rating">4.9 on Google</b>Loved in Vijayawada</span></div>
@@ -49,7 +51,7 @@
 
     <!-- Trust strip -->
     <section class="trust" aria-label="Why Varam">
-      <div class="container">
+      <div class="container" data-reveal data-stagger="90">
         <div><span class="ic ic-red" data-icon="drop"></span><span><b>Wood-pressed</b>Traditional gaanuga</span></div>
         <div><span class="ic ic-green" data-icon="leaf"></span><span><b>Unrefined</b>Natural colour &amp; aroma</span></div>
         <div><span class="ic ic-amber" data-icon="truck"></span><span><b id="trust-delivery">Free delivery ₹999+</b>Across Vijayawada</span></div>
@@ -57,13 +59,18 @@
       </div>
     </section>
 
+    <div class="marquee" aria-hidden="true"><div class="track">
+      <span>Wood-pressed groundnut oil <i>✦</i> Gingelly (nuvvula nune) <i>✦</i> Coconut oil <i>✦</i> Kachi ghani mustard <i>✦</i> Pure ghee <i>✦</i> Natural honey <i>✦</i> Free store pickup <i>✦</i></span>
+      <span>Wood-pressed groundnut oil <i>✦</i> Gingelly (nuvvula nune) <i>✦</i> Coconut oil <i>✦</i> Kachi ghani mustard <i>✦</i> Pure ghee <i>✦</i> Natural honey <i>✦</i> Free store pickup <i>✦</i></span>
+    </div></div>
+
     <!-- Catalog -->
     <section class="section" id="shop">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">Shop</span><h2>Our wood-pressed range</h2><p>Pick your pack size — prices update instantly. Add to cart and check out online or on WhatsApp.</p></div>
         </div>
-        <div class="catalog-tools">
+        <div class="catalog-tools" data-reveal="fade-up">
           <div class="pills" id="category-pills" role="toolbar" aria-label="Filter by category"></div>
           <label class="catalog-search"><span class="sr-only">Search the catalogue</span>
             <span data-icon="search"></span>
@@ -86,10 +93,10 @@
     <!-- Process -->
     <section class="section bg-white" id="process">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">Our process</span><h2>From seed to bottle, the slow way</h2><p>Tap a step to see how every bottle of Varam is made.</p></div>
         </div>
-        <div class="process">
+        <div class="process" data-reveal="fade-up">
           <div class="steps" role="tablist" aria-label="Process steps" id="process-steps"></div>
           <div class="step-visual" id="process-visual" role="tabpanel" aria-live="polite"></div>
         </div>
@@ -99,10 +106,10 @@
     <!-- Comparison -->
     <section class="section">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">Know your oil</span><h2>Wood-pressed vs. industrial refined</h2><p>Most supermarket oils are refined. Here is what is different about a traditional wood-pressed oil.</p></div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" data-reveal="fade-up">
           <table class="compare">
             <thead><tr><th scope="col">&nbsp;</th><th scope="col" class="us">Varam wood-pressed</th><th scope="col">Industrial refined</th></tr></thead>
             <tbody>
@@ -115,7 +122,7 @@
           </table>
         </div>
 
-        <div class="eco" style="margin-top:40px">
+        <div class="eco" style="margin-top:40px" data-reveal="scale-in">
           <div><span class="eyebrow" style="color:#d9f99d">Better for you, gentler on the planet</span>
             <h2 style="margin-top:10px">Less processing. Less waste. Local.</h2>
             <p>Traditional pressing skips the refining line altogether. Buy from our Vijayawada store and pick up for free — fewer delivery trips, more fresh oil.</p></div>
@@ -131,10 +138,10 @@
     <!-- Reviews -->
     <section class="section bg-blush" id="reviews">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">Reviews</span><h2>Loved in Vijayawada</h2></div>
         </div>
-        <div class="reviews-summary" id="reviews-summary"></div>
+        <div class="reviews-summary" id="reviews-summary" data-reveal="fade-up"></div>
         <div class="testimonials" id="testimonials"></div>
       </div>
     </section>
@@ -142,11 +149,11 @@
     <!-- Store & bulk -->
     <section class="section" id="store">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">Store &amp; bulk</span><h2>Visit us on BRTS Road</h2><p>See, smell and taste our oils in person — or order bulk tins for your family, restaurant or event.</p></div>
         </div>
-        <div class="store" id="store-card"></div>
-        <div class="bulk">
+        <div class="store" id="store-card" data-reveal="fade-up"></div>
+        <div class="bulk" data-reveal="fade-up">
           <div><b>Bulk &amp; monthly orders</b><div class="muted" style="font-size:14px">Families, restaurants, sweet shops and events — tell us what you need and we'll quote you on WhatsApp.</div></div>
           <a class="btn btn-wa" id="bulk-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener"><span data-icon="wa"></span>Ask for a bulk quote</a>
         </div>
@@ -156,7 +163,7 @@
     <!-- FAQ -->
     <section class="section bg-white" id="faq">
       <div class="container" style="max-width:900px">
-        <div class="section-head">
+        <div class="section-head" data-reveal="blur-in">
           <div><span class="kicker">FAQ</span><h2>Questions, answered</h2></div>
         </div>
         <div class="faq-tools">
@@ -164,12 +171,13 @@
           <label class="catalog-search" style="flex:1 1 220px"><span class="sr-only">Search FAQ</span><span data-icon="search"></span>
             <input type="search" id="faq-search" placeholder="Search questions…"></label>
         </div>
-        <div class="faq-list" id="faq-list"></div>
+        <div class="faq-list" id="faq-list" data-reveal="fade-up"></div>
       </div>
     </section>
   </main>
 
   <div id="site-footer"></div>
+  <script src="/js/motion.js"></script>
   <script src="/js/common.js"></script>
   <script src="/js/home.js"></script>
 </body>

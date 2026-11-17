@@ -20,6 +20,7 @@ const publicUser = (u) => ({
   role: u.role,
   defaultAddress: u.default_address || "",
   pincode: u.pincode || "",
+  memberSince: u.created_at || null,
 });
 
 router.post("/register", registerLimiter, async (req, res) => {

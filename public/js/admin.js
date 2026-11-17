@@ -91,12 +91,19 @@
     "/admin": ["dashboard", "Dashboard", renderDashboard],
     "/admin/products": ["products", "Products & prices", renderProducts],
     "/admin/orders": ["orders", "Orders", renderOrders],
+    "/admin/customers": ["customers", "Customers", renderCustomers],
     "/admin/settings": ["settings", "Coupons & settings", renderSettings],
   };
 
-  function navigate(path, push = true) {
+  function navigate(fullPath, push = true) {
+    const [path, qs] = fullPath.split("?");
     const route = ROUTES[path] || ROUTES["/admin"];
-    if (push) history.pushState(null, "", path);
+    if (path === "/admin/orders" && qs !== undefined) {
+      const p = new URLSearchParams(qs);
+      orderQuery.status = p.get("status") || "";
+      orderQuery.page = 1;
+    }
+    if (push) history.pushState(null, "", fullPath);
     $("#admin-title").textContent = route[1];
     document.title = `${route[1]} · Varam Admin`;
     $$(".admin-nav a[data-route]").forEach((a) => (a.dataset.route === route[0] ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
@@ -114,7 +121,7 @@
     e.preventDefault();
     navigate(a.getAttribute("href"));
   });
-  window.addEventListener("popstate", () => navigate(location.pathname, false));
+  window.addEventListener("popstate", () => navigate(location.pathname + location.search, false));
   $(".admin-menu").addEventListener("click", () => {
     const open = $("#admin-side").classList.toggle("open");
     $(".admin-menu").setAttribute("aria-expanded", String(open));
@@ -126,16 +133,47 @@
 
   /* ---------------- Dashboard ---------------- */
 
+  function salesChart(days) {
+    const max = Math.max(1, ...days.map((d) => d.revenue));
+    const total = days.reduce((s, d) => s + d.revenue, 0);
+    return `<div class="head"><h2>Sales — last 14 days</h2><span class="muted" style="font-size:14px">${inr(total)} · ${days.reduce((n, d) => n + d.orders, 0)} orders</span></div>
+      <div class="chart" role="img" aria-label="Daily revenue for the last 14 days">${days
+        .map((d, i) => {
+          const h = Math.max(2, Math.round((d.revenue / max) * 100));
+          const label = new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+          return `<div class="col"><div class="bar${d.revenue ? "" : " zero"}" style="height:${h}%;animation-delay:${i * 40}ms" data-tip="${label}: ${inr(d.revenue)} · ${d.orders} order${d.orders === 1 ? "" : "s"}"></div><span class="lbl">${i % 2 ? "" : label}</span></div>`;
+        })
+        .join("")}</div>`;
+  }
+
   async function renderDashboard() {
     const s = await api("GET", "/api/admin/stats");
+    const topMax = Math.max(1, ...s.topProducts.map((t) => t.revenue));
     view.innerHTML = `
       <div class="kpis">
         <div class="kpi"><span>Total revenue</span><b>${inr(s.totalRevenue)}</b><span>${s.totalOrders} orders</span></div>
         <div class="kpi"><span>Today's orders</span><b>${s.todayOrders}</b><span>${inr(s.todayRevenue)}</span></div>
         <div class="kpi red"><span>Pending orders</span><b>${s.pendingOrders}</b><a href="/admin/orders" data-nav class="link-btn">Review →</a></div>
         <div class="kpi warn"><span>Low-stock packs (≤ 5)</span><b>${s.lowStock.length}</b><a href="/admin/products" data-nav class="link-btn">Restock →</a></div>
-        <div class="kpi"><span>Customers</span><b>${s.totalCustomers}</b><span>registered</span></div>
+        <div class="kpi"><span>Customers</span><b>${s.totalCustomers}</b><a href="/admin/customers" data-nav class="link-btn">View →</a></div>
       </div>
+      <section class="a-panel">${salesChart(s.salesByDay)}
+        <div class="status-pills" style="margin-top:16px">${Object.entries(s.statusCounts)
+          .map(([st, n]) => `<a href="/admin/orders?status=${encodeURIComponent(st)}" data-nav><span class="status ${statusClass(st)}">${esc(st)}</span><b>${n}</b></a>`)
+          .join("")}</div>
+      </section>
+      <section class="a-panel"><div class="head"><h2>Top products by revenue</h2></div>
+        ${
+          s.topProducts.length
+            ? `<div class="hbar">${s.topProducts
+                .map(
+                  (t, i) =>
+                    `<div class="row"><span>${esc(t.name)} <span class="muted">· ${t.quantity} sold</span></span><b>${inr(t.revenue)}</b><span class="track"><i style="width:${Math.round((t.revenue / topMax) * 100)}%;animation-delay:${i * 80}ms"></i></span></div>`,
+                )
+                .join("")}</div>`
+            : '<p class="muted">Sales will appear here once orders come in.</p>'
+        }
+      </section>
       <div class="two-col">
         <section class="a-panel"><div class="head"><h2>Recent orders</h2><a class="btn btn-outline btn-sm" href="/admin/orders" data-nav>All orders</a></div>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Total</th><th>Status</th></tr></thead><tbody>
@@ -150,19 +188,29 @@
               : '<tr class="empty-row"><td colspan="5">No orders yet</td></tr>'
           }</tbody></table></div></section>
         <section class="a-panel"><div class="head"><h2>Low stock</h2></div>
-          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th>Pack</th><th>SKU</th><th>Stock</th></tr></thead><tbody>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Product</th><th>Pack</th><th>Stock</th><th>Restock to</th></tr></thead><tbody>
           ${
             s.lowStock.length
               ? s.lowStock
                   .map(
                     (v) =>
-                      `<tr><td>${esc(v.name)}</td><td>${esc(v.sizeLabel)}</td><td class="muted">${esc(v.sku)}</td><td><span class="badge ${v.stockQty <= 0 ? "badge-out" : "badge-low"}">${v.stockQty}</span></td></tr>`,
+                      `<tr><td>${esc(v.name)}<br><span class="muted">${esc(v.sku)}</span></td><td>${esc(v.sizeLabel)}</td><td><span class="badge ${v.stockQty <= 0 ? "badge-out" : "badge-low"}">${v.stockQty}</span></td>
+                      <td><div class="restock"><input type="number" min="0" value="50" aria-label="New stock for ${esc(v.name)} ${esc(v.sizeLabel)}"><button class="btn btn-dark btn-sm" type="button" data-restock="${v.variantId}">Save</button></div></td></tr>`,
                   )
                   .join("")
               : '<tr class="empty-row"><td colspan="4">All packs are well stocked</td></tr>'
           }</tbody></table></div></section>
       </div>`;
   }
+
+  // Quick restock from the dashboard
+  view.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-restock]");
+    if (!b) return;
+    const input = b.parentElement.querySelector("input");
+    const ok = await run(() => api("PATCH", `/api/admin/variants/${b.dataset.restock}/stock`, { stockQty: input.value }), "Stock updated");
+    if (ok) renderDashboard();
+  });
 
   // One listener for every clickable order row (dashboard + orders list)
   view.addEventListener("click", (e) => {
@@ -416,6 +464,7 @@
           <input class="input" type="search" id="o-q" placeholder="Order no., name or phone" value="${esc(orderQuery.q)}" aria-label="Search orders">
           <select class="select" id="o-status" aria-label="Filter by status"><option value="">All statuses</option>${STATUSES.map((s) => `<option ${orderQuery.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>
           <select class="select" id="o-ful" aria-label="Filter by fulfilment"><option value="">Delivery &amp; pickup</option><option value="delivery" ${orderQuery.fulfillment === "delivery" ? "selected" : ""}>Delivery</option><option value="pickup" ${orderQuery.fulfillment === "pickup" ? "selected" : ""}>Vijayawada pickup</option></select>
+          <a class="btn btn-outline btn-sm" id="o-csv" href="/api/admin/orders.csv" download>⬇ Export CSV</a>
         </div></div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Payment</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody id="orders-body"></tbody></table></div>
       <div class="pager" id="orders-pager"></div></section>`;
@@ -450,6 +499,8 @@
   async function loadOrders() {
     const qs = new URLSearchParams(Object.entries(orderQuery).filter(([, v]) => v !== "" && v !== null));
     const r = await api("GET", `/api/admin/orders?${qs}`);
+    const csvQs = new URLSearchParams(Object.entries({ status: orderQuery.status, fulfillment: orderQuery.fulfillment }).filter(([, v]) => v));
+    $("#o-csv").href = `/api/admin/orders.csv${csvQs.toString() ? "?" + csvQs : ""}`;
     $("#orders-count").textContent = `${r.total} order${r.total === 1 ? "" : "s"}`;
     $("#orders-body").innerHTML = r.orders.length
       ? r.orders
@@ -534,6 +585,41 @@
         if (location.pathname === "/admin/orders") loadOrders();
       }
     });
+  }
+
+  /* ---------------- Customers ---------------- */
+
+  let customerQ = "";
+  async function renderCustomers() {
+    view.innerHTML = `<section class="a-panel">
+      <div class="head"><h2 id="cust-count">Customers</h2>
+        <div class="filters"><input class="input" type="search" id="cust-q" placeholder="Name, email or phone" value="${esc(customerQ)}" aria-label="Search customers"></div></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Phone</th><th>Joined</th><th>Orders</th><th>Spent</th><th>Last order</th><th></th></tr></thead><tbody id="cust-body"></tbody></table></div>
+    </section>`;
+    let t;
+    $("#cust-q").addEventListener("input", (e) => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        customerQ = e.target.value.trim();
+        loadCustomers();
+      }, 250);
+    });
+    await loadCustomers();
+  }
+
+  async function loadCustomers() {
+    const { customers } = await api("GET", `/api/admin/customers${customerQ ? `?q=${encodeURIComponent(customerQ)}` : ""}`);
+    $("#cust-count").textContent = `${customers.length} customer${customers.length === 1 ? "" : "s"}`;
+    $("#cust-body").innerHTML = customers.length
+      ? customers
+          .map(
+            (c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.email)}</span></td><td>${esc(c.phone || "—")}</td>
+              <td>${new Date(c.joinedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</td><td>${c.orders}</td><td><b>${inr(c.spent)}</b></td>
+              <td>${c.lastOrderAt ? dt(c.lastOrderAt) : "—"}</td>
+              <td>${c.phone ? `<a class="btn btn-wa btn-sm" href="https://wa.me/91${esc(c.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}</td></tr>`,
+          )
+          .join("")
+      : '<tr class="empty-row"><td colspan="7">No customers yet</td></tr>';
   }
 
   /* ---------------- Coupons & settings ---------------- */
@@ -683,7 +769,7 @@
         return;
       }
       $("#admin-email").textContent = user.email;
-      navigate(location.pathname, false);
+      navigate(location.pathname + location.search, false);
     } catch {
       location.href = "/admin/login";
     }

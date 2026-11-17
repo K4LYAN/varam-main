@@ -67,6 +67,17 @@ router.get("/catalog", async (_req, res) => {
   res.json({ ...catalog, settings: publicSettings(settings) });
 });
 
+/** One product + related products (same category first) for the product details page. */
+router.get("/products/:slug", async (req, res) => {
+  const { products } = await activeCatalog();
+  const product = products.find((p) => p.slug === String(req.params.slug));
+  if (!product) return res.status(404).json({ error: "Product not found" });
+  const same = products.filter((p) => p.id !== product.id && p.category?.slug === product.category?.slug);
+  const others = products.filter((p) => p.id !== product.id && p.category?.slug !== product.category?.slug);
+  res.set("Cache-Control", "no-store");
+  res.json({ product, related: [...same, ...others].slice(0, 4) });
+});
+
 router.get("/settings", async (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json(publicSettings(await getSettings()));
