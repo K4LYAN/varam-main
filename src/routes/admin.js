@@ -2,6 +2,7 @@
 
 const express = require("express");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
@@ -22,7 +23,7 @@ const ORDER_STATUSES = ["Pending", "Confirmed", "Packed", "Out for Delivery", "D
 /* Dashboard                                                           */
 /* ------------------------------------------------------------------ */
 
-router.get("/stats", async (_req, res) => {
+router.get("/stats", async (req, res) => {
   const [[revenue], [today], [pending], lowStock, [customers], recent] = await Promise.all([
     query("SELECT COALESCE(SUM(total_amount),0) AS v, COUNT(*) AS n FROM orders WHERE status <> 'Cancelled'"),
     query("SELECT COUNT(*) AS n, COALESCE(SUM(total_amount),0) AS v FROM orders WHERE DATE(created_at) = CURDATE() AND status <> 'Cancelled'"),
@@ -57,7 +58,13 @@ router.get("/stats", async (_req, res) => {
     salesByDay.push({ date: d, orders: r ? Number(r.n) : 0, revenue: r ? Number(r.v) : 0 });
   }
 
+  // Remind the admin while the shipped default password is still in use
+  const { DEFAULT_ADMIN } = require("../migrate");
+  const [me] = await query("SELECT password_hash FROM users WHERE id = ?", [req.user.id]);
+  const defaultPassword = !!me && (await bcrypt.compare(DEFAULT_ADMIN.password, me.password_hash));
+
   res.json({
+    defaultPassword,
     salesByDay,
     topProducts: top.map((t) => ({ name: t.name, quantity: Number(t.qty), revenue: Number(t.revenue) })),
     statusCounts: Object.fromEntries(ORDER_STATUSES.map((s) => [s, Number(statusRows.find((r) => r.status === s)?.n || 0)])),

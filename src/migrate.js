@@ -1,9 +1,11 @@
 "use strict";
 
-const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { query } = require("./db");
 const config = require("./config");
+
+// Default admin login used when ADMIN_EMAIL / ADMIN_PASSWORD are not set
+const DEFAULT_ADMIN = { email: "admin@varam.in", password: "Varam@12345" };
 
 /* ------------------------------------------------------------------ */
 /* Schema (idempotent)                                                 */
@@ -298,32 +300,19 @@ async function migrate() {
     console.log(`[migrate] seeded ${CATEGORIES.length} categories and ${PRODUCTS.length} products`);
   }
 
-  // Default admin account
+  // Default admin account (change the password later from Admin -> Coupons & settings)
   const admins = await query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (!admins.length) {
-    const email = config.admin.email || "admin@varam.in";
-    let password = config.admin.password;
-    let generated = false;
-    if (!password || password.length < 10) {
-      password = crypto.randomBytes(9).toString("base64url");
-      generated = true;
-    }
+    const email = config.admin.email || DEFAULT_ADMIN.email;
+    const password = config.admin.password && config.admin.password.length >= 8 ? config.admin.password : DEFAULT_ADMIN.password;
     const hash = await bcrypt.hash(password, 12);
     await query(
       `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')
        ON DUPLICATE KEY UPDATE role = 'admin', password_hash = VALUES(password_hash)`,
       [config.admin.name, email, hash],
     );
-    if (generated) {
-      console.log("==================================================================");
-      console.log(`[migrate] Admin account created: ${email}`);
-      console.log(`[migrate] One-time generated password: ${password}`);
-      console.log("[migrate] Sign in at /admin/login and change it (Admin → Settings).");
-      console.log("==================================================================");
-    } else {
-      console.log(`[migrate] Admin account created: ${email}`);
-    }
+    console.log(`[migrate] Admin account created: ${email}` + (password === DEFAULT_ADMIN.password ? " (default password - change it in Admin -> Coupons & settings)" : ""));
   }
 }
 
-module.exports = { migrate, DEFAULT_SETTINGS };
+module.exports = { migrate, DEFAULT_SETTINGS, DEFAULT_ADMIN };

@@ -150,6 +150,7 @@
     const s = await api("GET", "/api/admin/stats");
     const topMax = Math.max(1, ...s.topProducts.map((t) => t.revenue));
     view.innerHTML = `
+      ${s.defaultPassword ? `<div class="a-alert" role="alert"><b>You're using the default admin password.</b> <a href="/admin/settings" data-nav>Change it now →</a></div>` : ""}
       <div class="kpis">
         <div class="kpi"><span>Total revenue</span><b>${inr(s.totalRevenue)}</b><span>${s.totalOrders} orders</span></div>
         <div class="kpi"><span>Today's orders</span><b>${s.todayOrders}</b><span>${inr(s.todayRevenue)}</span></div>

@@ -105,7 +105,13 @@ touch tmp/restart.txt                     # or click Restart in cPanel
 ```
 
 ### 5. First login
-Open `https://varam.in/admin/login` and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`. (If you left the password empty, a one-time random password is printed in the app's log — cPanel → Setup Node.js App → your app → log, or `~/varam/stderr.log`.) Change it under **Admin → Coupons & settings**, then remove `ADMIN_PASSWORD` from the environment variables.
+Open `https://varam.in/admin/login` and sign in with the default login:
+
+| Email | Password |
+|---|---|
+| `admin@varam.in` | `Varam@12345` |
+
+(Or whatever you set in `ADMIN_EMAIL` / `ADMIN_PASSWORD` before the first start.) Then change the password under **Admin → Coupons & settings → Change admin password** — the dashboard shows a reminder until you do. The default only applies when the first admin account is created; changing it later is permanent.
 
 ### 6. HTTPS
 cPanel → **SSL/TLS Status** → run AutoSSL for `varam.in`. Session cookies are marked `Secure` in production, so the site must be served over HTTPS.

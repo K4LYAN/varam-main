@@ -324,6 +324,7 @@ async function waitForServer(proc) {
       assert.equal(s.totalCustomers, 1);
       assert.equal(s.totalRevenue, 3493);
       assert.equal(s.salesByDay.length, 14);
+      assert.equal(s.defaultPassword, false); // custom ADMIN_PASSWORD, so no reminder
       assert.equal(s.salesByDay.at(-1).revenue, 3493);
       assert.equal(s.topProducts[0].name, "Pure Ghee");
       assert.equal(s.statusCounts.Cancelled, 1);
