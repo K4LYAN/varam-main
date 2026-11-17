@@ -92,6 +92,11 @@ CALL varam_add_column('coupons', 'expires_at', 'expires_at DATETIME NULL AFTER u
 -- ---------------------------------------------------------------------
 UPDATE orders SET order_number = CONCAT('VRM-LEGACY-', id) WHERE order_number IS NULL;
 ALTER TABLE orders MODIFY order_number VARCHAR(30) NOT NULL;
+-- International orders: country, contact email, payment link / bank transfer
+CALL varam_add_column('orders', 'customer_email', 'customer_email VARCHAR(190) NULL AFTER customer_phone');
+CALL varam_add_column('orders', 'country', 'country VARCHAR(60) NOT NULL DEFAULT ''India'' AFTER pincode');
+ALTER TABLE orders MODIFY pincode VARCHAR(12) NULL;
+ALTER TABLE orders MODIFY payment_method ENUM('UPI','COD','STORE','INTL') NOT NULL;
 CALL varam_add_index('orders', 'idx_orders_user_created', 'KEY idx_orders_user_created (user_id, created_at)');
 CALL varam_add_index('orders', 'idx_orders_status_created', 'KEY idx_orders_status_created (status, created_at)');
 CALL varam_drop_index('orders', 'idx_orders_user', 'idx_orders_user_created');

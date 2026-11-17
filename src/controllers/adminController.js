@@ -99,16 +99,18 @@ async function listOrders(req, res) {
 
 async function exportOrders(req, res) {
   const rows = await orderService.adminExport(orderFilters(req.query));
-  const header = ["Order", "Date", "Status", "Customer", "Phone", "Fulfilment", "Address", "Pincode", "Payment", "Items", "Subtotal", "Discount", "Delivery", "Total", "Coupon"];
+  const header = ["Order", "Date", "Status", "Customer", "Phone", "Email", "Fulfilment", "Address", "Pincode", "Country", "Payment", "Items", "Subtotal", "Discount", "Delivery", "Total", "Coupon"];
   const body = rows.map((o) => [
     o.order_number,
     new Date(o.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
     o.status,
     o.customer_name,
     o.customer_phone,
+    o.customer_email,
     o.fulfillment_type,
     o.delivery_address,
     o.pincode,
+    o.country,
     o.payment_method,
     o.items,
     o.subtotal,

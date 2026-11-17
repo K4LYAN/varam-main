@@ -25,8 +25,7 @@
 
   function render() {
     const s = state.settings || {};
-    document.title = `${product.name} — ${variant.sizeLabel} | Varam Vijayawada`;
-    document.querySelector('meta[name="description"]').setAttribute("content", `${product.name}: ${product.tagline} Order online or pick up free at our Vijayawada store.`);
+    // Title, description, canonical and Product structured data are rendered on the server for search engines
     $("#crumbs").innerHTML = `<a href="/">Home</a><span>/</span><a href="/#shop">Shop</a><span>/</span>${
       product.category ? `<a href="/?category=${esc(product.category.slug)}#shop">${esc(product.category.name)}</a><span>/</span>` : ""
     }<span aria-current="page">${esc(product.name)}</span>`;
@@ -62,7 +61,7 @@
         <a class="btn btn-wa btn-block" style="margin-top:10px" target="_blank" rel="noopener" id="wa-enquire">${I.wa} Ask about this on WhatsApp</a>
 
         <div class="perks" data-reveal data-stagger="80">
-          <div><span class="ic ic-red">${I.drop}</span><span><b>Wood-pressed</b>Slow traditional ghani</span></div>
+          <div><span class="ic ic-red">${I.drop}</span><span><b>Cold-pressed</b>Slow wooden ghani</span></div>
           <div><span class="ic ic-green">${I.leaf}</span><span><b>Unrefined</b>No bleaching or deodorising</span></div>
           <div><span class="ic ic-amber">${I.truck}</span><span><b>${s.freeDeliveryThreshold ? `Free delivery ${inr(s.freeDeliveryThreshold)}+` : "Home delivery"}</b>${s.deliveryFee ? `${inr(s.deliveryFee)} below that` : "Across Vijayawada"}</span></div>
           <div><span class="ic ic-red">${I.store}</span><span><b>Free store pickup</b>BRTS Rd, Vijayawada</span></div>
@@ -79,7 +78,7 @@
             <dt>Category</dt><dd>${esc(product.category?.name || "—")}</dd>
             <dt>Pack sizes</dt><dd>${product.variants.map((x) => esc(x.sizeLabel)).join(", ")}</dd>
             <dt>SKU</dt><dd id="sku">${esc(variant.sku)}</dd>
-            <dt>Process</dt><dd>${/ghee|honey/i.test(product.name) ? "Traditionally prepared, filtered and packed" : "Wood-pressed (gaanuga), naturally settled and filtered — unrefined"}</dd>
+            <dt>Process</dt><dd>${/ghee|honey/i.test(product.name) ? "Traditionally prepared, filtered and packed" : "Cold-pressed in a wooden ghani (gaanuga), naturally settled and filtered — unrefined"}</dd>
             <dt>Storage</dt><dd>Keep in a cool, dry place away from direct sunlight. Close the cap tightly after use.</dd>
           </dl></div>
           <div class="tab-panel hidden" role="tabpanel" id="tp-2" aria-labelledby="tb-2">
@@ -91,7 +90,6 @@
       </div>`;
     updateLive();
     wireTabs();
-    injectSchema();
     renderSticky();
   }
 
@@ -139,37 +137,6 @@
         tabs[next].focus();
       });
     });
-  }
-
-  function injectSchema() {
-    const s = state.settings || {};
-    const data = {
-      "@context": "https://schema.org",
-      "@type": "Product",
-      name: product.name,
-      description: product.description || product.tagline,
-      brand: { "@type": "Brand", name: "Varam" },
-      category: product.category?.name,
-      image: product.imageUrl ? new URL(product.imageUrl, location.origin).href : `${location.origin}/img/varam-logo.jpg`,
-      offers: product.variants.map((x) => ({
-        "@type": "Offer",
-        name: x.sizeLabel,
-        sku: x.sku,
-        price: x.price.toFixed(2),
-        priceCurrency: "INR",
-        availability: x.stockQty > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-        url: location.href,
-        seller: { "@type": "Organization", name: s.storeName || "Varam" },
-      })),
-    };
-    let el = document.getElementById("product-schema");
-    if (!el) {
-      el = document.createElement("script");
-      el.type = "application/ld+json";
-      el.id = "product-schema";
-      document.head.appendChild(el);
-    }
-    el.textContent = JSON.stringify(data);
   }
 
   function relatedCard(p) {

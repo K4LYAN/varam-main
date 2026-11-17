@@ -9,6 +9,8 @@ const { verifyInvoiceToken } = require("../services/invoiceService");
 const { renderInvoice } = require("../utils/invoiceTemplate");
 const validate = require("../validators");
 const { clean } = require("../utils/validate");
+const seo = require("../utils/seo");
+const { faqFor } = require("../content/faq");
 
 const VIEWS = path.join(config.root, "views");
 const send = (res, ...parts) => res.sendFile(path.join(VIEWS, ...parts));
@@ -16,9 +18,97 @@ const notFoundPage = (res) => res.status(404).sendFile(path.join(VIEWS, "404.htm
 
 const view = (...parts) => (_req, res) => send(res, ...parts);
 
+const telHref = (p) => `tel:+91${String(p || "").replace(/\D/g, "").slice(-10)}`;
+
+/** Phones, WhatsApp and the three email addresses — server-rendered so search engines see them. */
+function contactBlock(s) {
+  const e = seo.esc;
+  const rows = [
+    s.store_phone && `<li><span class="ci" data-icon="phone"></span><span><small>Call / WhatsApp</small><a href="${telHref(s.store_phone)}">${e(s.store_phone)}</a></span></li>`,
+    s.store_phone_2 && `<li><span class="ci" data-icon="phone"></span><span><small>Call</small><a href="${telHref(s.store_phone_2)}">${e(s.store_phone_2)}</a></span></li>`,
+    s.email_primary && `<li><span class="ci" data-icon="mail"></span><span><small>Orders</small><a href="mailto:${e(s.email_primary)}">${e(s.email_primary)}</a></span></li>`,
+    s.email_info && `<li><span class="ci" data-icon="mail"></span><span><small>Products &amp; bulk enquiries</small><a href="mailto:${e(s.email_info)}">${e(s.email_info)}</a></span></li>`,
+    s.email_support && `<li><span class="ci" data-icon="mail"></span><span><small>Order help &amp; support</small><a href="mailto:${e(s.email_support)}">${e(s.email_support)}</a></span></li>`,
+  ].filter(Boolean);
+  return `<ul class="contact-list">${rows.join("")}</ul>`;
+}
+
+/** <details> list of FAQs (works without JavaScript). */
+function faqItems(list, { idPrefix = "faq" } = {}) {
+  const e = seo.esc;
+  return list
+    .map((f, i) => `<details class="faq-d" id="${idPrefix}-${i + 1}" data-cat="${e(f.cat)}"><summary>${e(f.q)}<span class="faq-plus" aria-hidden="true"></span></summary><div class="faq-a"><p>${e(f.a)}</p></div></details>`)
+    .join("");
+}
+
+const HOME_TITLE = "Cold-Pressed Oils Online | Wood-Pressed Groundnut, Sesame & Coconut Oil – Varam";
+const HOME_DESC =
+  "Buy traditional cold-pressed (wood-pressed, gaanuga) groundnut, sesame, coconut, mustard and castor oils, pure ghee and honey from Varam, Vijayawada. Delivery across India and worldwide.";
+
+async function home(_req, res) {
+  const s = await settingsService.getSettings();
+  const faq = faqFor(s);
+  seo.render(res, "index.html", {
+    seo: { title: HOME_TITLE, description: HOME_DESC, path: "/", jsonld: [seo.storeSchema(s), seo.websiteSchema()] },
+    blocks: {
+      CONTACT_BLOCK: contactBlock(s),
+      FAQ_TEASER: faqItems(faq.filter((f) => f.featured).slice(0, 4), { idPrefix: "q" }),
+      STORE_ADDRESS: seo.esc(s.store_address),
+      STORE_HOURS: seo.esc(s.store_hours),
+    },
+  });
+}
+
+async function faqPage(_req, res) {
+  const s = await settingsService.getSettings();
+  const faq = faqFor(s);
+  const cats = [...new Set(faq.map((f) => f.cat))];
+  const grouped = cats
+    .map(
+      (c) => `<section class="faq-group" data-group="${seo.esc(c)}" aria-labelledby="g-${seo.esc(c).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}">
+        <h2 id="g-${seo.esc(c).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}">${seo.esc(c)}</h2>${faqItems(faq.filter((f) => f.cat === c), { idPrefix: c.replace(/[^a-z0-9]+/gi, "-").toLowerCase() })}</section>`,
+    )
+    .join("");
+  seo.render(res, "faq.html", {
+    seo: {
+      title: "FAQ – Cold-Pressed Oils, Delivery in India & Worldwide | Varam",
+      description:
+        "Answers about Varam's cold-pressed (wood-pressed) oils, ordering, UPI payment, delivery across India, international shipping, storage and how to contact us.",
+      path: "/faq",
+      jsonld: [seo.faqSchema(faq), seo.breadcrumbSchema([{ name: "Home", path: "/" }, { name: "FAQ", path: "/faq" }])],
+    },
+    blocks: {
+      FAQ_FILTERS: ["All", ...cats].map((c, i) => `<button type="button" class="chip" data-faq-cat="${seo.esc(c)}" aria-pressed="${i === 0}">${seo.esc(c)}</button>`).join(""),
+      FAQ_GROUPS: grouped,
+      CONTACT_BLOCK: contactBlock(s),
+    },
+  });
+}
+
 async function product(req, res) {
-  if (!(await catalogService.isActiveSlug(clean(req.params.slug, 150)))) return notFoundPage(res);
-  send(res, "product.html");
+  const data = await catalogService.productWithRelated(clean(req.params.slug, 150));
+  if (!data) return notFoundPage(res);
+  const p = data.product;
+  const from = Math.min(...p.variants.map((v) => v.price));
+  const sizes = p.variants.map((v) => v.sizeLabel).join(", ");
+  seo.render(res, "product.html", {
+    seo: {
+      title: `${p.name} – ₹${from.toLocaleString("en-IN")} (${sizes}) | Varam`,
+      description: `${p.tagline ? p.tagline + " " : ""}${p.name} from Varam, Vijayawada — traditionally made, unrefined. Delivery across India and worldwide.`.slice(0, 300),
+      path: `/product/${encodeURIComponent(p.slug)}`,
+      image: p.imageUrl || "/img/varam-logo.jpg",
+      type: "product",
+      jsonld: [
+        seo.productSchema(p),
+        seo.breadcrumbSchema([
+          { name: "Home", path: "/" },
+          ...(p.category ? [{ name: p.category.name, path: `/?category=${encodeURIComponent(p.category.slug)}#shop` }] : []),
+          { name: p.name, path: `/product/${encodeURIComponent(p.slug)}` },
+        ]),
+      ],
+    },
+    blocks: { PRODUCT_NAME: seo.esc(p.name) },
+  });
 }
 
 const login = (req, res) => (req.user ? res.redirect("/account") : send(res, "login.html"));
@@ -63,8 +153,15 @@ function robots(_req, res) {
 
 async function sitemap(_req, res) {
   const slugs = await catalogService.activeSlugs();
-  const urls = ["/", ...slugs.map((s) => `/product/${encodeURIComponent(s)}`)].map((u) => `<url><loc>${config.siteUrl}${u}</loc></url>`).join("");
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [
+    ["/", "daily", "1.0"],
+    ["/faq", "monthly", "0.6"],
+    ...slugs.map((s) => [`/product/${encodeURIComponent(s)}`, "weekly", "0.8"]),
+  ]
+    .map(([u, freq, pri]) => `<url><loc>${config.siteUrl}${u}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${pri}</priority></url>`)
+    .join("");
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
 }
 
-module.exports = { view, product, login, register, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };
+module.exports = { view, home, faqPage, product, login, register, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };

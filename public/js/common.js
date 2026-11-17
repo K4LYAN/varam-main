@@ -94,6 +94,8 @@
     store: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9 5 4h14l1 5M4 9v11h16V9M4 9h16M9 20v-6h6v6"/></svg>',
     wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01Zm-7.01 15.24a8.23 8.23 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28Z"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.5 4.5 7 4.5c2 0 3.4 1.1 5 3 1.6-1.9 3-3 5-3 3.5 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2Z"/></svg>',
+    mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     nav: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 22 2l-9 19-2-8-8-2Z"/></svg>',
   };
 
@@ -110,7 +112,7 @@
     const t = /^#[0-9a-f]{6}$/i.test(tone || "") ? tone : "#D97706";
     const jar = /ghee|honey/i.test(name);
     const label = String(name)
-      .replace(/^(wood-pressed|kachi ghani|pure)\s+/i, "")
+      .replace(/^(cold-pressed|wood-pressed|kachi ghani|pure)\s+/i, "").replace(/\s*\(kachi ghani\)$/i, "")
       .replace(/\s+oil$/i, "")
       .toUpperCase();
     const body = jar
@@ -132,7 +134,7 @@
 <text x="120" y="300" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="22" letter-spacing="4" fill="#D92D20">VARAM</text>
 <line x1="94" x2="146" y1="312" y2="312" stroke="#F59E0B" stroke-width="1.2"/>
 <text x="120" y="336" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="${fs}" fill="#111827">${esc(label)}</text>
-<text x="120" y="353" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="6.6" letter-spacing="1.6" fill="#4B5563">${jar ? (/honey/i.test(name) ? "NATURAL HONEY" : "TRADITIONAL GHEE") : "WOOD-PRESSED OIL"}</text>
+<text x="120" y="353" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="6.6" letter-spacing="1.6" fill="#4B5563">${jar ? (/honey/i.test(name) ? "NATURAL HONEY" : "TRADITIONAL GHEE") : "COLD-PRESSED OIL"}</text>
 ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="8" letter-spacing="1.2" fill="#D97706">${esc(String(size).toUpperCase())}</text>` : ""}
 </svg>`;
   }
@@ -354,7 +356,8 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         q = await api("POST", "/api/checkout/quote", {
           items: Cart.items,
           couponCode: Cart.prefs.couponCode,
-          fulfillment: Cart.prefs.fulfillment,
+          fulfillment: isIntl() ? "delivery" : Cart.prefs.fulfillment,
+          country: isIntl() ? Cart.prefs.country || "Outside India" : "India",
         });
       } catch {
         q = null;
@@ -384,9 +387,17 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
   const NAV = [
     { href: "/#shop", label: "Shop Oils" },
     { href: "/#process", label: "Our Process" },
-    { href: "/#store", label: "Store & Bulk" },
-    { href: "/#faq", label: "FAQ" },
+    { href: "/#store", label: "Contact & Store" },
+    { href: "/faq", label: "FAQ" },
   ];
+
+  /** Countries for orders from outside India (any other country can be typed after choosing "Other"). */
+  const COUNTRIES = [
+    "United States", "United Kingdom", "Canada", "Australia", "New Zealand", "United Arab Emirates", "Saudi Arabia", "Qatar",
+    "Kuwait", "Oman", "Bahrain", "Singapore", "Malaysia", "Sri Lanka", "Nepal", "Bangladesh", "Germany", "France",
+    "Netherlands", "Ireland", "Italy", "Switzerland", "Sweden", "Norway", "Denmark", "Japan", "South Africa", "Kenya", "Mauritius",
+  ];
+  const isIntl = () => Cart.prefs.fulfillment === "international";
 
   function telHref(p) {
     return "tel:+91" + String(p || "").replace(/\D/g, "").slice(-10);
@@ -403,12 +414,13 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       <a class="skip" href="#main">Skip to content</a>
       <div class="utility"><div class="container">
         <div class="u-left"><span class="u-addr">${I.pin}${esc(s.storeAddress)}</span>
-          <a href="${telHref(s.storePhone)}">${I.phone}${esc(s.storePhone)}</a></div>
-        <span class="u-hide">${I.clock}${esc(s.storeHours)}</span>
+          <a href="${telHref(s.storePhone)}">${I.phone}${esc(s.storePhone)}</a>
+          ${s.storePhone2 ? `<a class="u-hide" href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a>` : ""}</div>
+        ${s.emails && s.emails.primary ? `<a class="u-hide" href="mailto:${esc(s.emails.primary)}">${I.mail}${esc(s.emails.primary)}</a>` : `<span class="u-hide">${I.clock}${esc(s.storeHours)}</span>`}
       </div></div>
       ${s.announcement ? `<div class="announce">${esc(s.announcement)}</div>` : ""}
       <header class="site-header"><div class="container">
-        <a class="brand" href="/" aria-label="Varam home"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>WOOD-PRESSED OILS</small></span></a>
+        <a class="brand" href="/" aria-label="Varam home"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
         <nav class="main-nav" aria-label="Main">${NAV.map((n) => `<a href="${n.href}">${n.label}</a>`).join("")}</nav>
         <div class="header-search" role="search">${I.search}
           <input type="search" id="site-search" placeholder="Search oils, ghee, honey…" autocomplete="off" aria-label="Search products" aria-controls="search-results">
@@ -500,16 +512,20 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const cats = (state.catalog?.categories || []).map((c) => `<li><a href="/?category=${esc(c.slug)}#shop">${esc(c.name)}</a></li>`).join("");
     mount.innerHTML = `<footer class="site-footer"><div class="container">
       <div class="cols">
-        <div><a class="brand" href="/"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>WOOD-PRESSED OILS</small></span></a>
-          <p style="margin-top:14px;font-size:14px;max-width:340px">Traditionally wood-pressed (gaanuga) oils, pure ghee and honey from Vijayawada. Pure · Natural · Traditional.</p></div>
+        <div><a class="brand" href="/"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
+          <p style="margin-top:14px;font-size:14px;max-width:340px">Traditional cold-pressed (gaanuga) oils, pure ghee and natural honey from Vijayawada. Pure · Natural · Traditional.</p>
+          <span class="ships-note">${I.globe}We ship across India &amp; worldwide</span></div>
         <div><h4>Shop</h4><ul>${cats}</ul></div>
-        <div><h4>Help</h4><ul><li><a href="/#process">Our Process</a></li><li><a href="/#store">Store &amp; Bulk Orders</a></li><li><a href="/#faq">FAQ</a></li><li><a href="/account">My Account</a></li>${
+        <div><h4>Help</h4><ul><li><a href="/faq">FAQ</a></li><li><a href="/#process">Our Process</a></li><li><a href="/#store">Contact &amp; Store</a></li><li><a href="/account">My Account</a></li>${
           s.instagramUrl ? `<li><a href="${esc(s.instagramUrl)}" target="_blank" rel="noopener">Instagram</a></li>` : ""
         }</ul></div>
-        <div><h4>Visit us</h4><ul><li>${esc(s.storeAddress)}</li><li><a href="${telHref(s.storePhone)}">${esc(s.storePhone)}</a></li>
-          <li><a href="https://wa.me/${esc(s.whatsappNumber)}" target="_blank" rel="noopener">WhatsApp us</a></li><li>${esc(s.storeHours)}</li></ul></div>
+        <div><h4>Contact us</h4><ul class="footer-contact">
+          <li>${I.pin}<span>${esc(s.storeAddress)}</span></li>
+          <li>${I.phone}<span><a href="${telHref(s.storePhone)}">${esc(s.storePhone)}</a>${s.storePhone2 ? ` · <a href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a>` : ""}</span></li>
+          ${[s.emails?.primary, s.emails?.info, s.emails?.support].filter(Boolean).map((m) => `<li>${I.mail}<a href="mailto:${esc(m)}">${esc(m)}</a></li>`).join("")}
+          <li>${I.clock}<span>${esc(s.storeHours)}</span></li></ul></div>
       </div>
-      <div class="legal"><span>© ${new Date().getFullYear()} Varam Organic Oil, Vijayawada</span><span>Prices in ₹ include all items listed; delivery charges shown at checkout.</span></div>
+      <div class="legal"><span>© ${new Date().getFullYear()} Varam Organic Oil, Vijayawada</span><span>Prices in ₹. Delivery charges for India are shown at checkout; international shipping is quoted by email.</span></div>
     </div></footer>
     <a class="wa-float" href="https://wa.me/${esc(s.whatsappNumber)}?text=${encodeURIComponent("Hello Varam! I'd like to know more about your oils.")}" target="_blank" rel="noopener" aria-label="Chat with Varam on WhatsApp">${I.wa}</a>`;
   }
@@ -538,6 +554,11 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     });
     drawerEl.addEventListener("click", onDrawerClick);
     drawerEl.addEventListener("change", (e) => {
+      if (e.target.id === "co-country") {
+        $("#co-country-other-wrap", drawerEl)?.classList.toggle("hidden", e.target.value !== "__other");
+        if (e.target.value === "__other") $("#co-country-other", drawerEl)?.focus();
+        return;
+      }
       const id = e.target.dataset && e.target.dataset.useAddress;
       const a = id && (state.addresses || []).find((x) => String(x.id) === id);
       if (a) fillAddress(a);
@@ -601,25 +622,42 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     let foot = "";
 
     if (!Cart.items.length) {
-      body = `<div class="empty" style="margin-top:24px;border:0"><div class="empty-art">${I.bag}</div><h3>Your cart is empty</h3><p class="muted" style="margin:6px 0 16px">Add some wood-pressed goodness.</p><a class="btn btn-primary" href="/#shop" data-close>Shop Oils</a></div>${upsellHtml()}`;
+      body = `<div class="empty" style="margin-top:24px;border:0"><div class="empty-art">${I.bag}</div><h3>Your cart is empty</h3><p class="muted" style="margin:6px 0 16px">Add some cold-pressed goodness.</p><a class="btn btn-primary" href="/#shop" data-close>Shop Oils</a></div>${upsellHtml()}`;
     } else if (drawerStep === "checkout") {
       const u = state.user || {};
       const pickup = Cart.prefs.fulfillment === "pickup";
+      const intl = isIntl();
+      const country = Cart.prefs.country || "";
       body = `<form class="form" id="checkout-form" novalidate>
         <button type="button" class="link-btn" data-step="cart">← Back to cart</button>
         <div class="form-error hidden" id="checkout-error" role="alert"></div>
         <div class="field"><label for="co-name">Full name</label><input class="input" id="co-name" name="name" autocomplete="name" required value="${esc(u.name || "")}"></div>
-        <div class="field"><label for="co-phone">Mobile number (WhatsApp)</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required value="${esc(u.phone || "")}" placeholder="10-digit mobile"></div>
+        ${
+          intl
+            ? `<div class="field"><label for="co-country">Country</label><select class="select input" id="co-country" name="country" autocomplete="country-name" required>
+                 <option value="">Choose your country</option>${COUNTRIES.map((c) => `<option ${c === country ? "selected" : ""}>${esc(c)}</option>`).join("")}
+                 <option value="__other" ${country && !COUNTRIES.includes(country) ? "selected" : ""}>Other country…</option></select></div>
+               <div class="field ${country && !COUNTRIES.includes(country) ? "" : "hidden"}" id="co-country-other-wrap"><label for="co-country-other">Country name</label><input class="input" id="co-country-other" name="countryOther" maxlength="60" value="${esc(country && !COUNTRIES.includes(country) ? country : "")}"></div>
+               <div class="field"><label for="co-phone">Phone / WhatsApp with country code</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required placeholder="+1 415 555 0100"></div>
+               <div class="field"><label for="co-email">Email</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" required value="${esc(u.email || "")}" placeholder="We send the shipping quote & payment link here"></div>`
+            : `<div class="field"><label for="co-phone">Mobile number (WhatsApp)</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required value="${esc(u.phone || "")}" placeholder="10-digit mobile"></div>
+               <div class="field"><label for="co-email">Email (optional)</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" value="${esc(u.email || "")}"></div>`
+        }
         ${
           pickup
             ? `<div class="bulk" style="margin:0"><div><b>Free store pickup</b><div class="muted" style="font-size:14px">${esc(s.storeAddress)}</div></div></div>`
-            : `${addressPickerHtml()}<div class="field"><label for="co-address">Delivery address</label><textarea class="input" id="co-address" name="address" autocomplete="street-address" required>${esc(u.defaultAddress || "")}</textarea></div>
-               <div class="field"><label for="co-pin">Pincode</label><input class="input" id="co-pin" name="pincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" required value="${esc(u.pincode || "")}"></div>`
+            : `${intl ? "" : addressPickerHtml()}<div class="field"><label for="co-address">${intl ? "Full shipping address" : "Delivery address"}</label><textarea class="input" id="co-address" name="address" autocomplete="street-address" required>${intl ? "" : esc(u.defaultAddress || "")}</textarea></div>
+               <div class="field"><label for="co-pin">${intl ? "Postal / ZIP code" : "Pincode"}</label><input class="input" id="co-pin" name="pincode" ${intl ? 'maxlength="12"' : 'inputmode="numeric" maxlength="6"'} autocomplete="postal-code" required value="${intl ? "" : esc(u.pincode || "")}"></div>`
         }
         <div class="field"><span class="label">Payment</span><div class="radio-row">
-          <label><input type="radio" name="paymentMethod" value="UPI" checked> <span>UPI</span></label>
-          ${pickup ? `<label><input type="radio" name="paymentMethod" value="STORE"> <span>Pay at store</span></label>` : ""}
+          ${
+            intl
+              ? `<label><input type="radio" name="paymentMethod" value="INTL" checked> <span>Secure payment link by email</span></label>`
+              : `<label><input type="radio" name="paymentMethod" value="UPI" checked> <span>UPI</span></label>
+                 ${pickup ? `<label><input type="radio" name="paymentMethod" value="STORE"> <span>Pay at store</span></label>` : ""}`
+          }
         </div></div>
+        ${intl ? `<p class="intl-note">International shipping depends on weight and destination. After you place the order we email the shipping charge and a secure payment link — nothing is charged until you confirm.</p>` : ""}
         <div class="field"><label for="co-notes">Notes (optional)</label><input class="input" id="co-notes" name="notes" maxlength="300" placeholder="e.g. preferred delivery time"></div>
       </form>`;
       foot = totalsHtml(q) + `<div class="drawer-actions">
@@ -634,9 +672,10 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         (saved > 0 ? `<div class="savings">You save ${inr(saved)} on MRP with this order 🎉</div>` : "") +
         upsellHtml();
       const pct = q && q.freeDeliveryThreshold ? Math.min(100, Math.round((q.subtotal / q.freeDeliveryThreshold) * 100)) : 0;
-      foot = `<div class="seg" role="group" aria-label="Fulfilment">
-          <button type="button" data-fulfil="delivery" aria-pressed="${Cart.prefs.fulfillment === "delivery"}">Home Delivery<small>Free above ${inr(s.freeDeliveryThreshold)}</small></button>
-          <button type="button" data-fulfil="pickup" aria-pressed="${Cart.prefs.fulfillment === "pickup"}">Store Pickup<small>Free · BRTS Rd, Vijayawada</small></button>
+      foot = `<div class="seg seg-3" role="group" aria-label="Fulfilment">
+          <button type="button" data-fulfil="delivery" aria-pressed="${Cart.prefs.fulfillment === "delivery"}">India delivery<small>Free above ${inr(s.freeDeliveryThreshold)}</small></button>
+          <button type="button" data-fulfil="pickup" aria-pressed="${Cart.prefs.fulfillment === "pickup"}">Store pickup<small>Free · Vijayawada</small></button>
+          <button type="button" data-fulfil="international" aria-pressed="${isIntl()}">Outside India<small>Shipping quoted</small></button>
         </div>
         ${
           Cart.prefs.fulfillment === "delivery" && q
@@ -717,8 +756,8 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     return `<div class="totals">
       <div><span>Subtotal (${q.itemCount} item${q.itemCount === 1 ? "" : "s"})</span><span>${inr(q.subtotal)}</span></div>
       ${q.discount > 0 ? `<div class="disc"><span>Discount (${esc(q.couponCode)})</span><span>− ${inr(q.discount)}</span></div>` : ""}
-      <div><span>${Cart.prefs.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}</span></div>
-      <div class="grand"><span>Total</span><span>${inr(q.total)}</span></div></div>`;
+      <div><span>${isIntl() ? "International shipping" : Cart.prefs.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${isIntl() ? "Quoted by email" : q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}</span></div>
+      <div class="grand"><span>${isIntl() ? "Total (before shipping)" : "Total"}</span><span>${inr(q.total)}</span></div></div>`;
   }
 
   async function onDrawerClick(e) {
@@ -804,13 +843,26 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const errBox = $("#checkout-error", drawerEl);
     errBox.classList.add("hidden");
     const v = formValues();
-    const phone = String(v.phone || "").replace(/\D/g, "").slice(-10);
+    const intl = isIntl();
+    const country = intl ? (v.country === "__other" ? String(v.countryOther || "").trim() : v.country || "") : "India";
+    const phone = intl ? String(v.phone || "").trim() : String(v.phone || "").replace(/\D/g, "").slice(-10);
+    const email = String(v.email || "").trim();
     const problems = [];
     if (!v.name || v.name.trim().length < 2) problems.push("Enter your name");
-    if (!/^[6-9]\d{9}$/.test(phone)) problems.push("Enter a valid 10-digit mobile number");
-    if (Cart.prefs.fulfillment === "delivery") {
-      if (!v.address || v.address.trim().length < 8) problems.push("Enter your full delivery address");
-      if (!/^[1-9]\d{5}$/.test(String(v.pincode || ""))) problems.push("Enter a valid 6-digit pincode");
+    if (intl) {
+      if (!country) problems.push("Choose your country");
+      const d = phone.replace(/\D/g, "");
+      if (d.length < 8 || d.length > 15) problems.push("Enter your phone number with the country code");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problems.push("Enter your email — we send the payment link there");
+      if (!v.address || v.address.trim().length < 8) problems.push("Enter your full shipping address");
+      if (!/^[A-Za-z0-9][A-Za-z0-9 -]{1,11}$/.test(String(v.pincode || "").trim())) problems.push("Enter your postal / ZIP code");
+    } else {
+      if (!/^[6-9]\d{9}$/.test(phone)) problems.push("Enter a valid 10-digit mobile number");
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problems.push("Enter a valid email or leave it empty");
+      if (Cart.prefs.fulfillment === "delivery") {
+        if (!v.address || v.address.trim().length < 8) problems.push("Enter your full delivery address");
+        if (!/^[1-9]\d{5}$/.test(String(v.pincode || ""))) problems.push("Enter a valid 6-digit pincode");
+      }
     }
     if (problems.length) {
       errBox.textContent = problems.join(" · ");
@@ -826,7 +878,9 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         items: Cart.items,
         name: v.name,
         phone,
-        fulfillment: Cart.prefs.fulfillment,
+        email,
+        country,
+        fulfillment: intl ? "delivery" : Cart.prefs.fulfillment,
         address: v.address,
         pincode: v.pincode,
         paymentMethod: v.paymentMethod,
@@ -839,7 +893,11 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       store.set(PREF_KEY, Cart.prefs);
       Cart.changed(false);
       closeDrawer();
-      showReceipt(order, v.name);
+      if (intl) {
+        Cart.prefs.country = country;
+        store.set(PREF_KEY, Cart.prefs);
+      }
+      showReceipt(order, v.name, email);
       state.catalog = null; // stock changed
       window.dispatchEvent(new Event("varam:catalog-stale"));
     } catch (err) {
@@ -851,7 +909,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     }
   }
 
-  function showReceipt(order, name) {
+  function showReceipt(order, name, email) {
     const s = state.settings || {};
     const wrap = document.createElement("div");
     wrap.className = "modal";
@@ -859,7 +917,9 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     wrap.setAttribute("aria-modal", "true");
     wrap.setAttribute("aria-label", "Order placed");
     const pay =
-      order.paymentMethod === "UPI"
+      order.paymentMethod === "INTL"
+        ? `We'll email the international shipping charge and a secure payment link to <b>${esc(email || "your email")}</b> — usually within one working day.`
+        : order.paymentMethod === "UPI"
         ? order.upiId
           ? `Pay <b>${inr(order.total)}</b> by UPI to <b>${esc(order.upiId)}</b> and share the screenshot on WhatsApp.`
           : "We'll share UPI payment details on WhatsApp when we confirm your order."
@@ -873,7 +933,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       <div class="receipt">
         ${order.lines.map((l) => `<div><span>${esc(l.name)} · ${esc(l.sizeLabel)} × ${l.quantity}</span><span>${inr(l.lineTotal)}</span></div>`).join("")}
         ${order.discount > 0 ? `<div><span>Discount</span><span>− ${inr(order.discount)}</span></div>` : ""}
-        <div><span>${order.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${order.deliveryFee > 0 ? inr(order.deliveryFee) : "Free"}</span></div>
+        <div><span>${order.international ? `Shipping to ${esc(order.country)}` : order.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${order.international ? "Quoted by email" : order.deliveryFee > 0 ? inr(order.deliveryFee) : "Free"}</span></div>
         <div style="font-weight:800"><span>Total</span><span>${inr(order.total)}</span></div>
       </div>
       <p style="margin-top:14px;font-size:14px">${pay}</p>
@@ -913,12 +973,15 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       "",
       `Subtotal: ${inr(q.subtotal)}`,
       ...(q.discount > 0 ? [`Discount (${q.couponCode}): −${inr(q.discount)}`] : []),
-      `${Cart.prefs.fulfillment === "pickup" ? "Store pickup (BRTS Rd, Vijayawada)" : "Home delivery"}: ${q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}`,
+      isIntl()
+        ? `International shipping${v.country && v.country !== "__other" ? " to " + v.country : v.countryOther ? " to " + v.countryOther : ""}: please quote`
+        : `${Cart.prefs.fulfillment === "pickup" ? "Store pickup (BRTS Rd, Vijayawada)" : "Home delivery"}: ${q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}`,
       `*Total: ${inr(q.total)}*`,
       "",
       ...(name ? [`Name: ${name}`] : []),
       ...(phone ? [`Phone: ${phone}`] : []),
-      ...(Cart.prefs.fulfillment === "delivery" && address ? [`Address: ${address}${pin ? " - " + pin : ""}`] : []),
+      ...(v.email ? [`Email: ${v.email}`] : []),
+      ...(Cart.prefs.fulfillment !== "pickup" && address ? [`Address: ${address}${pin ? " - " + pin : ""}`] : []),
       "",
       "Please confirm availability and payment details. Thank you!",
     ].join("\n");

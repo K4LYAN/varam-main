@@ -126,7 +126,7 @@
       .map((i) => `<span title="${esc(i.productName)}">${window.Varam.bottleSvg(i.productName, colourFor(i.productName))}</span>`)
       .join("");
     return `<article class="order-card" data-order="${esc(o.orderNumber)}">
-      <div class="top"><div><b>${esc(o.orderNumber)}</b><div class="muted" style="font-size:13px">${fmtDate(o.createdAt)} · ${o.fulfillmentType === "pickup" ? "Store pickup" : "Home delivery"} · ${esc(o.paymentMethod === "STORE" ? "Pay at store" : o.paymentMethod)}</div></div>
+      <div class="top"><div><b>${esc(o.orderNumber)}</b><div class="muted" style="font-size:13px">${fmtDate(o.createdAt)} · ${o.fulfillmentType === "pickup" ? "Store pickup" : o.international ? `Shipping to ${esc(o.country)}` : "Home delivery"} · ${esc({ STORE: "Pay at store", INTL: "Payment link by email" }[o.paymentMethod] || o.paymentMethod)}</div></div>
         <span class="status ${statusClass(o.status)}">${esc(o.status)}</span></div>
       ${tracker(o)}
       <div class="thumbs">${thumbs}</div>
@@ -164,7 +164,7 @@
         <section class="panel"><h2>Latest order</h2>${latest ? orderCard(latest) : emptyOrders()}</section>
         <section class="panel"><h2>Quick actions</h2>
           <div style="display:grid;gap:10px">
-            <a class="btn btn-primary" href="/#shop">${I.bag} Shop wood-pressed oils</a>
+            <a class="btn btn-primary" href="/#shop">${I.bag} Shop cold-pressed oils</a>
             ${latest ? `<button class="btn btn-outline" type="button" data-reorder="${esc(latest.orderNumber)}">Reorder last order</button>` : ""}
             <button class="btn btn-outline" type="button" data-goto="addresses">Manage addresses</button>
             <a class="btn btn-wa" href="https://wa.me/${esc(s.whatsappNumber || "917799228444")}" target="_blank" rel="noopener">${I.wa} Chat with Varam</a>

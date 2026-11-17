@@ -103,10 +103,12 @@ const TABLES = [
     user_id INT UNSIGNED NULL,
     customer_name VARCHAR(120) NOT NULL,
     customer_phone VARCHAR(20) NOT NULL,
+    customer_email VARCHAR(190) NULL,
     fulfillment_type ENUM('delivery','pickup') NOT NULL,
     delivery_address VARCHAR(500) NULL,
-    pincode VARCHAR(10) NULL,
-    payment_method ENUM('UPI','COD','STORE') NOT NULL,
+    pincode VARCHAR(12) NULL,
+    country VARCHAR(60) NOT NULL DEFAULT 'India',
+    payment_method ENUM('UPI','COD','STORE','INTL') NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL,
     discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
     delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -209,6 +211,7 @@ const TABLES = [
  *  index   — add an index if missing
  *  dropIndex — drop a redundant index if present (only after its replacement exists)
  *  notNull — make a column NOT NULL after backfilling NULLs
+ *  modify  — MODIFY a column unless its current type already contains `unless`
  *  fk      — add a foreign key if missing, after cleaning orphaned rows
  *  check   — add a CHECK constraint if missing (best effort: logged, never fatal)
  */
@@ -224,6 +227,11 @@ const UPGRADES = [
   { type: "column", table: "coupons", column: "expires_at", ddl: "expires_at DATETIME NULL AFTER used_count" },
 
   { type: "notNull", table: "orders", column: "order_number", ddl: "order_number VARCHAR(30) NOT NULL", backfill: "UPDATE orders SET order_number = CONCAT('VRM-LEGACY-', id) WHERE order_number IS NULL" },
+  // International orders
+  { type: "column", table: "orders", column: "customer_email", ddl: "customer_email VARCHAR(190) NULL AFTER customer_phone" },
+  { type: "column", table: "orders", column: "country", ddl: "country VARCHAR(60) NOT NULL DEFAULT 'India' AFTER pincode" },
+  { type: "modify", table: "orders", column: "pincode", unless: "varchar(12)", ddl: "pincode VARCHAR(12) NULL" },
+  { type: "modify", table: "orders", column: "payment_method", unless: "'INTL'", ddl: "payment_method ENUM('UPI','COD','STORE','INTL') NOT NULL" },
   { type: "index", table: "orders", name: "idx_orders_user_created", ddl: "KEY idx_orders_user_created (user_id, created_at)" },
   { type: "index", table: "orders", name: "idx_orders_status_created", ddl: "KEY idx_orders_status_created (status, created_at)" },
   { type: "dropIndex", table: "orders", name: "idx_orders_user", replacedBy: "idx_orders_user_created" },

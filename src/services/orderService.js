@@ -47,6 +47,9 @@ function shapeOrder(o, items = []) {
     createdAt: o.created_at,
     customerName: o.customer_name,
     customerPhone: o.customer_phone,
+    customerEmail: o.customer_email || "",
+    country: o.country || "India",
+    international: (o.country || "India") !== "India",
     fulfillmentType: o.fulfillment_type,
     paymentMethod: o.payment_method,
     deliveryAddress: o.delivery_address,
@@ -105,7 +108,7 @@ async function releaseCoupon(conn, couponCode) {
  */
 async function placeOrder({ user, input, settings }) {
   const result = await transaction(async (conn) => {
-    const q = await quote({ items: input.items, couponCode: input.couponCode, fulfillment: input.fulfillment }, settings, conn);
+    const q = await quote({ items: input.items, couponCode: input.couponCode, fulfillment: input.fulfillment, country: input.country }, settings, conn);
     if (q.hasProblems) {
       throw conflict(
         "Some items are out of stock or no longer available. Please review your cart.",
@@ -130,17 +133,19 @@ async function placeOrder({ user, input, settings }) {
       orderNumber = generateOrderNumber();
       try {
         const [ins] = await conn.execute(
-          `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, fulfillment_type, delivery_address, pincode,
-             payment_method, subtotal, discount_amount, delivery_fee, total_amount, coupon_code, notes, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+          `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_email, fulfillment_type, delivery_address, pincode,
+             country, payment_method, subtotal, discount_amount, delivery_fee, total_amount, coupon_code, notes, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
           [
             orderNumber,
             user?.id ?? null,
             input.name,
             input.phone,
+            input.email,
             input.fulfillment,
             input.address,
             input.pincode,
+            input.country,
             input.paymentMethod,
             q.subtotal,
             q.discount,
@@ -174,7 +179,7 @@ async function placeOrder({ user, input, settings }) {
 
     if (user) {
       await cartService.clear(user.id, conn);
-      if (input.address && !user.default_address) {
+      if (input.address && !user.default_address && input.country === "India") {
         await conn.execute("UPDATE users SET default_address = ?, pincode = ? WHERE id = ?", [input.address, input.pincode, user.id]);
       }
     }
@@ -278,6 +283,7 @@ async function adminList(filters, page = 1, perPage = 25) {
       orderNumber: o.order_number,
       customerName: o.customer_name,
       customerPhone: o.customer_phone,
+      country: o.country || "India",
       fulfillmentType: o.fulfillment_type,
       paymentMethod: o.payment_method,
       totalAmount: Number(o.total_amount),

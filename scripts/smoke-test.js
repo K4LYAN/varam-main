@@ -598,6 +598,69 @@ async function waitForServer(proc) {
       assert.equal((await admin("GET", `/api/admin/orders/${o.data.orderNumber}`)).status, 200, "order history kept");
     });
 
+    await step("cold-pressed names, contact emails + second phone in settings", async () => {
+      const c = (await guest("GET", "/api/catalog")).data;
+      const gn = c.products.find((p) => p.slug === "wood-pressed-groundnut-oil");
+      assert.match(gn.name, /^Cold-Pressed/);
+      assert.equal(c.settings.emails.primary, "varam@varams.in");
+      assert.equal(c.settings.emails.info, "info@varams.in");
+      assert.equal(c.settings.emails.support, "support@varams.in");
+      assert.equal(c.settings.storePhone2, "+91 95157 18720");
+    });
+
+    await step("SEO: home/FAQ/product have title, canonical, OG + JSON-LD; sitemap lists /faq", async () => {
+      const home = await guest("GET", "/");
+      assert.equal(home.status, 200);
+      assert.match(home.data, /<title>Cold-Pressed Oils Online[^<]*<\/title>/);
+      assert.match(home.data, /<link rel="canonical" href="http:\/\/localhost:3000\/">/);
+      assert.match(home.data, /property="og:title"/);
+      assert.match(home.data, /"@type":"Store"/);
+      assert.match(home.data, /support@varams\.in/);
+      assert.match(home.data, /\+91 95157 18720/);
+      assert.ok(!/\{\{[A-Z_]+\}\}/.test(home.data), "no unfilled placeholders on home");
+      const faq = await guest("GET", "/faq");
+      assert.equal(faq.status, 200);
+      assert.match(faq.data, /"@type":"FAQPage"/);
+      assert.match(faq.data, /Do you ship outside India\?/);
+      assert.match(faq.data, /<details class="faq-d"/);
+      assert.ok(!/\{\{[A-Z_]+\}\}/.test(faq.data));
+      const pdp = await guest("GET", "/product/pure-ghee");
+      assert.match(pdp.data, /<title>Pure Ghee – ₹/);
+      assert.match(pdp.data, /"@type":"Product"/);
+      assert.match(pdp.data, /"@type":"BreadcrumbList"/);
+      const login = await guest("GET", "/login");
+      assert.match(login.data, /noindex/);
+      const map = await guest("GET", "/sitemap.xml");
+      assert.match(map.data, /\/faq<\/loc>/);
+      assert.match(map.data, /\/product\/pure-ghee<\/loc>/);
+    });
+
+    await step("international order: shipping quoted, email + country required, stored on the order", async () => {
+      const items = [{ variantId: vid("pure-honey"), quantity: 1 }];
+      const q = (await guest("POST", "/api/checkout/quote", { items, fulfillment: "delivery", country: "United Kingdom" })).data;
+      assert.equal(q.international, true);
+      assert.equal(q.deliveryFee, 0);
+      assert.equal(q.amountToFreeDelivery, 0);
+      const base = { items, name: "Priya Rao", phone: "+44 20 7946 0958", fulfillment: "delivery", address: "10 Downing Street, London", pincode: "SW1A 2AA", country: "United Kingdom" };
+      assert.equal((await guest("POST", "/api/orders", { ...base, paymentMethod: "UPI", email: "priya@example.co.uk" })).status, 400, "UPI not offered abroad");
+      assert.equal((await guest("POST", "/api/orders", { ...base, paymentMethod: "INTL" })).status, 400, "email required abroad");
+      assert.equal((await guest("POST", "/api/orders", { ...base, paymentMethod: "INTL", email: "priya@example.co.uk", fulfillment: "pickup" })).status, 400);
+      const ok = await guest("POST", "/api/orders", { ...base, paymentMethod: "INTL", email: "priya@example.co.uk" });
+      assert.equal(ok.status, 201, JSON.stringify(ok.data));
+      assert.equal(ok.data.international, true);
+      assert.equal(ok.data.deliveryFee, 0);
+      const d = (await admin("GET", `/api/admin/orders/${ok.data.orderNumber}`)).data.order;
+      assert.equal(d.country, "United Kingdom");
+      assert.equal(d.customerEmail, "priya@example.co.uk");
+      assert.equal(d.customerPhone, "+442079460958");
+      assert.equal(d.paymentMethod, "INTL");
+      const inv = await guest("GET", ok.data.invoiceUrl);
+      assert.match(inv.data, /International shipping/);
+      assert.match(inv.data, /Quoted by email/);
+      // India orders still validate Indian numbers and reject the international payment method
+      assert.equal((await guest("POST", "/api/orders", { ...base, country: "India", pincode: "520011", phone: "9876543210", paymentMethod: "INTL" })).status, 400);
+    });
+
     await step("logout clears the session", async () => {
       await cust("POST", "/api/auth/logout");
       assert.equal((await cust("GET", "/api/auth/me")).data.user, null);

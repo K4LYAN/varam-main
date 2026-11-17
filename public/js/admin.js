@@ -561,6 +561,11 @@
         : "";
   }
 
+  const payLabel = (m) => ({ STORE: "Pay at store", INTL: "Payment link by email (international)", UPI: "UPI", COD: "Cash on delivery" })[m] || m;
+  /** Indian numbers are stored as 10 digits; international ones as +<country code><number>. */
+  const waNumber = (p) => (String(p).startsWith("+") ? String(p).replace(/\D/g, "") : `91${String(p).replace(/\D/g, "").slice(-10)}`);
+  const intlTel = (p) => `+${waNumber(p)}`;
+
   async function openOrder(orderNumber) {
     const { order: o } = await api("GET", `/api/admin/orders/${encodeURIComponent(orderNumber)}`);
     const m = modal(
@@ -569,10 +574,12 @@
         <dl class="dl">
           <dt>Placed</dt><dd>${dt(o.createdAt)}</dd>
           <dt>Customer</dt><dd>${esc(o.customerName)}</dd>
-          <dt>Phone</dt><dd><a href="tel:+91${esc(o.customerPhone)}">${esc(o.customerPhone)}</a></dd>
+          <dt>Phone</dt><dd><a href="tel:${esc(intlTel(o.customerPhone))}">${esc(o.customerPhone)}</a></dd>
+          ${o.customerEmail ? `<dt>Email</dt><dd><a href="mailto:${esc(o.customerEmail)}">${esc(o.customerEmail)}</a></dd>` : ""}
+          ${o.international ? `<dt>Country</dt><dd><b>${esc(o.country)}</b> — international order: email the shipping charge and payment link</dd>` : ""}
           <dt>Fulfilment</dt><dd>${o.fulfillmentType === "pickup" ? "Store pickup (BRTS Rd, Vijayawada)" : "Home delivery"}</dd>
           ${o.fulfillmentType === "delivery" ? `<dt>Address</dt><dd>${esc(o.deliveryAddress)}${o.pincode ? ` — ${esc(o.pincode)}` : ""}</dd>` : ""}
-          <dt>Payment</dt><dd>${esc(o.paymentMethod === "STORE" ? "Pay at store" : o.paymentMethod)}</dd>
+          <dt>Payment</dt><dd>${esc(payLabel(o.paymentMethod))}</dd>
           ${o.couponCode ? `<dt>Coupon</dt><dd>${esc(o.couponCode)}</dd>` : ""}
           ${o.notes ? `<dt>Notes</dt><dd>${esc(o.notes)}</dd>` : ""}
         </dl>
@@ -606,7 +613,7 @@
         Delivered: `Hello ${o.customerName}, your Varam order ${o.orderNumber} has been delivered. Thank you for choosing Varam! 🙏`,
         Cancelled: `Hello ${o.customerName}, your Varam order ${o.orderNumber} has been cancelled. Please reply if you have any questions.`,
       }[status];
-      $("#od-wa", m.el).href = `https://wa.me/91${o.customerPhone}?text=${encodeURIComponent(msg)}`;
+      $("#od-wa", m.el).href = `https://wa.me/${waNumber(o.customerPhone)}?text=${encodeURIComponent(msg)}`;
     };
     setWa(o.status);
     $("#od-status", m.el).addEventListener("change", (e) => setWa(e.target.value));
@@ -917,6 +924,10 @@
     ["delivery_fee", "Delivery charge (₹)", "number"],
     ["store_name", "Store name", "text"],
     ["store_phone", "Store phone", "text"],
+    ["store_phone_2", "Second phone", "text"],
+    ["email_primary", "Main email (orders)", "email"],
+    ["email_info", "Info email (products & bulk)", "email"],
+    ["email_support", "Support email (order help)", "email"],
     ["store_address", "Store address", "text", "full"],
     ["whatsapp_number", "WhatsApp number (with 91)", "text"],
     ["store_hours", "Store hours", "text"],

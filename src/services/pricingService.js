@@ -5,7 +5,7 @@
  * MySQL; prices, totals or discounts sent by the browser are never read.
  */
 const { queryRaw, query } = require("../db/pool");
-const { MAX_QTY, MAX_CART_LINES } = require("../config/defaults");
+const { MAX_QTY, MAX_CART_LINES, HOME_COUNTRY } = require("../config/defaults");
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -106,7 +106,8 @@ function couponDiscount(coupon, subtotal) {
  * Full quote: lines, subtotal, coupon discount, delivery fee and total.
  * Used by the cart drawer, coupon preview and (inside a transaction) checkout.
  */
-async function quote({ items, couponCode, fulfillment }, settings, conn) {
+async function quote({ items, couponCode, fulfillment, country = HOME_COUNTRY }, settings, conn) {
+  const international = fulfillment !== "pickup" && country !== HOME_COUNTRY;
   const lines = await priceLines(items, conn);
   const valid = lines.filter((l) => l.available && l.stock >= l.quantity);
   const subtotal = round2(valid.reduce((s, l) => s + l.lineTotal, 0));
@@ -125,7 +126,8 @@ async function quote({ items, couponCode, fulfillment }, settings, conn) {
   const threshold = Number(settings.free_delivery_threshold) || 0;
   const fee = Number(settings.delivery_fee) || 0;
   const afterDiscount = round2(subtotal - (appliedCoupon ? discount : 0));
-  const deliveryFee = fulfillment === "pickup" || subtotal === 0 ? 0 : subtotal >= threshold ? 0 : fee;
+  // Outside India the courier charge depends on weight and destination; we quote it by email
+  const deliveryFee = international || fulfillment === "pickup" || subtotal === 0 ? 0 : subtotal >= threshold ? 0 : fee;
 
   return {
     lines,
@@ -137,7 +139,9 @@ async function quote({ items, couponCode, fulfillment }, settings, conn) {
     couponError,
     deliveryFee,
     freeDeliveryThreshold: threshold,
-    amountToFreeDelivery: fulfillment === "pickup" ? 0 : Math.max(0, round2(threshold - subtotal)),
+    amountToFreeDelivery: fulfillment === "pickup" || international ? 0 : Math.max(0, round2(threshold - subtotal)),
+    international,
+    country: international ? country : HOME_COUNTRY,
     total: round2(afterDiscount + deliveryFee),
     hasProblems: lines.some((l) => !l.available || l.stock < l.quantity),
   };

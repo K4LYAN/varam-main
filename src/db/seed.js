@@ -33,45 +33,45 @@ const CATEGORIES = [
 /** Prices from VARAM's price list. Add more pack sizes in Admin → Products. */
 const PRODUCTS = [
   {
-    category: "groundnut-oil", slug: "wood-pressed-groundnut-oil", name: "Wood-Pressed Groundnut Oil",
+    category: "groundnut-oil", slug: "wood-pressed-groundnut-oil", name: "Cold-Pressed Groundnut Oil",
     tagline: "Golden and nutty — the everyday oil of Andhra kitchens.",
-    description: "Pressed slowly from groundnuts in a traditional wooden ghani (gaanuga), then left to settle naturally before bottling. Rich nutty aroma for tempering, curries, chutneys and everyday home cooking.",
+    description: "Cold-pressed slowly from groundnuts in a traditional wooden ghani (gaanuga), then left to settle naturally before bottling. Rich nutty aroma for tempering, curries, chutneys and everyday home cooking.",
     accent: "#D7A436", badge: "Bestseller", featured: 1, sku: "VRM-GN", size: "1 Litre", price: 370,
   },
   {
-    category: "sesame-oil", slug: "wood-pressed-white-sesame-oil", name: "Wood-Pressed White Sesame Oil",
+    category: "sesame-oil", slug: "wood-pressed-white-sesame-oil", name: "Cold-Pressed White Sesame Oil",
     tagline: "Traditional gingelly (nuvvula nune) with a gentle aroma.",
-    description: "Wood-pressed from white sesame seeds — a staple for pickles, podis, pulusu and traditional South Indian recipes.",
+    description: "Cold-pressed in a wooden ghani from white sesame seeds — a staple for pickles, podis, pulusu and traditional South Indian recipes.",
     accent: "#D6A13A", badge: "", featured: 1, sku: "VRM-WS", size: "1 Litre", price: 550,
   },
   {
-    category: "sesame-oil", slug: "wood-pressed-black-sesame-oil", name: "Wood-Pressed Black Sesame Oil",
+    category: "sesame-oil", slug: "wood-pressed-black-sesame-oil", name: "Cold-Pressed Black Sesame Oil",
     tagline: "Deep, earthy oil from black sesame seeds.",
-    description: "Wood-pressed from black sesame seeds; darker and more robust than white sesame oil. Used in traditional recipes and also traditionally for oil massage.",
+    description: "Cold-pressed in a wooden ghani from black sesame seeds; darker and more robust than white sesame oil. Used in traditional recipes and also traditionally for oil massage.",
     accent: "#7B4B1F", badge: "", featured: 0, sku: "VRM-BS", size: "1 Litre", price: 520,
   },
   {
-    category: "coconut-oil", slug: "wood-pressed-coconut-oil", name: "Wood-Pressed Coconut Oil",
+    category: "coconut-oil", slug: "wood-pressed-coconut-oil", name: "Cold-Pressed Coconut Oil",
     tagline: "Clear, fragrant oil from mature coconuts.",
-    description: "Wood-pressed from mature coconuts. Naturally fragrant; it may solidify in cool weather — keep the bottle somewhere warm to liquefy.",
+    description: "Cold-pressed in a wooden ghani from mature coconuts. Naturally fragrant; it may solidify in cool weather — keep the bottle somewhere warm to liquefy.",
     accent: "#EFE3BF", badge: "", featured: 1, sku: "VRM-CO", size: "1 Litre", price: 700,
   },
   {
-    category: "mustard-oil", slug: "kachi-ghani-mustard-oil", name: "Kachi Ghani Mustard Oil",
+    category: "mustard-oil", slug: "kachi-ghani-mustard-oil", name: "Cold-Pressed Mustard Oil (Kachi Ghani)",
     tagline: "Bold and pungent — made for pickles and curries.",
     description: "Cold, slow-pressed (kachi ghani) from mustard seeds, with the bold pungency that defines North and East Indian dishes and Andhra avakaya.",
     accent: "#C18414", badge: "", featured: 1, sku: "VRM-MU", size: "1 Litre", price: 480,
   },
   {
-    category: "other-oils", slug: "wood-pressed-sunflower-oil", name: "Wood-Pressed Sunflower Oil",
+    category: "other-oils", slug: "wood-pressed-sunflower-oil", name: "Cold-Pressed Sunflower Oil",
     tagline: "Light and mild for everyday cooking.",
-    description: "Wood-pressed from sunflower seeds — light in colour and mild in flavour for everyday cooking.",
+    description: "Cold-pressed in a wooden ghani from sunflower seeds — light in colour and mild in flavour for everyday cooking.",
     accent: "#E6C14C", badge: "", featured: 0, sku: "VRM-SF", size: "1 Litre", price: 550,
   },
   {
-    category: "other-oils", slug: "pure-castor-oil", name: "Pure Castor Oil",
+    category: "other-oils", slug: "pure-castor-oil", name: "Cold-Pressed Castor Oil",
     tagline: "Thick, traditional castor (amudam) oil.",
-    description: "Pressed from castor seeds. Traditionally used in hair and skin care routines and for lamps. Please follow the label for usage.",
+    description: "Cold-pressed from castor seeds. Traditionally used in hair and skin care routines and for lamps. Please follow the label for usage.",
     accent: "#E8D9A0", badge: "", featured: 0, sku: "VRM-CA", size: "1 Litre", price: 480,
   },
   {
@@ -140,4 +140,74 @@ async function seedAdmin() {
   console.log(`[migrate] Admin account created: ${email}${usingDefault ? " (default password - change it in Admin -> Coupons & settings)" : ""}`);
 }
 
-module.exports = { seedSettings, seedCatalog, seedAdmin };
+
+/**
+ * One-time wording update for stores seeded by an earlier version: products
+ * still carrying their original seed name/description switch to the
+ * "cold-pressed" wording. Anything the admin has edited is left alone.
+ */
+const COLD_PRESSED_RENAMES = [
+  {
+    "slug": "wood-pressed-groundnut-oil",
+    "fromName": "Wood-Pressed Groundnut Oil",
+    "toName": "Cold-Pressed Groundnut Oil",
+    "fromDescription": "Pressed slowly from groundnuts in a traditional wooden ghani (gaanuga), then left to settle naturally before bottling. Rich nutty aroma for tempering, curries, chutneys and everyday home cooking.",
+    "toDescription": "Cold-pressed slowly from groundnuts in a traditional wooden ghani (gaanuga), then left to settle naturally before bottling. Rich nutty aroma for tempering, curries, chutneys and everyday home cooking."
+  },
+  {
+    "slug": "wood-pressed-white-sesame-oil",
+    "fromName": "Wood-Pressed White Sesame Oil",
+    "toName": "Cold-Pressed White Sesame Oil",
+    "fromDescription": "Wood-pressed from white sesame seeds — a staple for pickles, podis, pulusu and traditional South Indian recipes.",
+    "toDescription": "Cold-pressed in a wooden ghani from white sesame seeds — a staple for pickles, podis, pulusu and traditional South Indian recipes."
+  },
+  {
+    "slug": "wood-pressed-black-sesame-oil",
+    "fromName": "Wood-Pressed Black Sesame Oil",
+    "toName": "Cold-Pressed Black Sesame Oil",
+    "fromDescription": "Wood-pressed from black sesame seeds; darker and more robust than white sesame oil. Used in traditional recipes and also traditionally for oil massage.",
+    "toDescription": "Cold-pressed in a wooden ghani from black sesame seeds; darker and more robust than white sesame oil. Used in traditional recipes and also traditionally for oil massage."
+  },
+  {
+    "slug": "wood-pressed-coconut-oil",
+    "fromName": "Wood-Pressed Coconut Oil",
+    "toName": "Cold-Pressed Coconut Oil",
+    "fromDescription": "Wood-pressed from mature coconuts. Naturally fragrant; it may solidify in cool weather — keep the bottle somewhere warm to liquefy.",
+    "toDescription": "Cold-pressed in a wooden ghani from mature coconuts. Naturally fragrant; it may solidify in cool weather — keep the bottle somewhere warm to liquefy."
+  },
+  {
+    "slug": "kachi-ghani-mustard-oil",
+    "fromName": "Kachi Ghani Mustard Oil",
+    "toName": "Cold-Pressed Mustard Oil (Kachi Ghani)",
+    "fromDescription": null,
+    "toDescription": null
+  },
+  {
+    "slug": "wood-pressed-sunflower-oil",
+    "fromName": "Wood-Pressed Sunflower Oil",
+    "toName": "Cold-Pressed Sunflower Oil",
+    "fromDescription": "Wood-pressed from sunflower seeds — light in colour and mild in flavour for everyday cooking.",
+    "toDescription": "Cold-pressed in a wooden ghani from sunflower seeds — light in colour and mild in flavour for everyday cooking."
+  },
+  {
+    "slug": "pure-castor-oil",
+    "fromName": "Pure Castor Oil",
+    "toName": "Cold-Pressed Castor Oil",
+    "fromDescription": "Pressed from castor seeds. Traditionally used in hair and skin care routines and for lamps. Please follow the label for usage.",
+    "toDescription": "Cold-pressed from castor seeds. Traditionally used in hair and skin care routines and for lamps. Please follow the label for usage."
+  }
+];
+
+async function applyColdPressedWording() {
+  let changed = 0;
+  for (const r of COLD_PRESSED_RENAMES) {
+    const a = await query("UPDATE products SET name = ? WHERE slug = ? AND name = ?", [r.toName, r.slug, r.fromName]);
+    changed += a.affectedRows;
+    if (r.fromDescription) {
+      await query("UPDATE products SET description = ? WHERE slug = ? AND description = ?", [r.toDescription, r.slug, r.fromDescription]);
+    }
+  }
+  if (changed) console.log(`[migrate] renamed ${changed} product(s) to cold-pressed wording`);
+}
+
+module.exports = { seedSettings, seedCatalog, seedAdmin, applyColdPressedWording };

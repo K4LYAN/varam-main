@@ -9,14 +9,14 @@
 const bcrypt = require("bcryptjs");
 const { query, db } = require("./pool");
 const { TABLES, UPGRADES } = require("./schema");
-const { seedSettings, seedCatalog, seedAdmin } = require("./seed");
+const { seedSettings, seedCatalog, seedAdmin, applyColdPressedWording } = require("./seed");
 const { DEFAULT_ADMIN } = require("../config/defaults");
 
 const IDENT = /^[a-z_][a-z0-9_]*$/i; // table / index / constraint names come from schema.js only
 
 async function columnInfo(table, column) {
   const rows = await query(
-    "SELECT IS_NULLABLE AS nullable FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+    "SELECT IS_NULLABLE AS nullable, COLUMN_TYPE AS type FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
     [table, column],
   );
   return rows[0] || null;
@@ -73,6 +73,12 @@ async function applyUpgrade(step) {
       await query(`ALTER TABLE \`${table}\` MODIFY ${step.ddl}`);
       return true;
     }
+    case "modify": {
+      const info = await columnInfo(table, step.column);
+      if (!info || String(info.type).toLowerCase().includes(step.unless.toLowerCase())) return false;
+      await query(`ALTER TABLE \`${table}\` MODIFY ${step.ddl}`);
+      return true;
+    }
     case "fk":
       if (await hasConstraint(table, step.name)) return false;
       if (step.cleanup) await query(step.cleanup);
@@ -112,6 +118,7 @@ async function migrate() {
     await seedSettings();
     await seedCatalog();
     await seedAdmin();
+    await applyColdPressedWording();
     await flagDefaultAdminPassword();
   } finally {
     await lockConn.query("SELECT RELEASE_LOCK('varam_migrate')").catch(() => {});

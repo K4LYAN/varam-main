@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7A2E1D">
+  {{SEO_HEAD}}
+  <link rel="icon" href="/img/varam-logo.jpg">
+  <link rel="apple-touch-icon" href="/img/varam-logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Tiro+Telugu&display=swap">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/effects.css">
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body class="faq-page">
+  <div id="site-header"></div>
+
+  <main id="main">
+    <header class="page-hero">
+      <div class="container narrow">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span aria-current="page">FAQ</span></nav>
+        <p class="eyebrow"><span class="te" lang="te">ప్రశ్నలు</span> Questions &amp; answers</p>
+        <h1>Frequently asked questions</h1>
+        <p class="lead">Everything about our cold-pressed oils, ordering, delivery across India and worldwide, payments and care. Can't find your answer? Write to us — we reply quickly.</p>
+      </div>
+    </header>
+
+    <section class="section" aria-label="FAQ list">
+      <div class="container narrow">
+        <div class="faq-tools">
+          <div class="chips" id="faq-filters" role="toolbar" aria-label="Filter questions by topic">{{FAQ_FILTERS}}</div>
+          <label class="catalog-search"><span class="sr-only">Search questions</span><span data-icon="search"></span>
+            <input type="search" id="faq-search" placeholder="Search questions…" autocomplete="off"></label>
+        </div>
+        <div id="faq-groups">{{FAQ_GROUPS}}</div>
+        <p class="muted hidden" id="faq-empty">No questions match your search. Ask us on WhatsApp or by email — details below.</p>
+      </div>
+    </section>
+
+    <section class="section section-paper" aria-labelledby="ask-title">
+      <div class="container narrow">
+        <div class="reach-card ask">
+          <h2 id="ask-title">Still have a question?</h2>
+          <p class="muted">We answer in English, Telugu and Hindi. Orders from India and other countries are welcome.</p>
+          {{CONTACT_BLOCK}}
+          <a class="btn btn-wa" id="faq-wa" href="https://wa.me/917799228444" target="_blank" rel="noopener"><span data-icon="wa"></span>Ask on WhatsApp</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="/js/motion.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/faq.js"></script>
+</body>
+</html>

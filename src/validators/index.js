@@ -7,7 +7,7 @@
  */
 const v = require("../utils/validate");
 const { normaliseItems } = require("../services/pricingService");
-const { FULFILLMENT_TYPES, PAYMENT_METHODS, MAX_QTY } = require("../config/defaults");
+const { FULFILLMENT_TYPES, PAYMENT_METHODS, HOME_COUNTRY, MAX_QTY } = require("../config/defaults");
 
 function password(value, field = "password", label = "Password") {
   const s = String(value || "");
@@ -57,21 +57,54 @@ const cartQuantity = (b) => ({
 
 const fulfillment = (value) => (value === "pickup" ? "pickup" : "delivery");
 
+/** Country name; anything that isn't India (in any casing) is an international order. */
+function country(value) {
+  const s = v.clean(value || HOME_COUNTRY, 60);
+  if (!/^[A-Za-z][A-Za-z .'()&-]{1,59}$/.test(s)) throw new v.ValidationError("Choose your country", "country");
+  return s.toLowerCase() === HOME_COUNTRY.toLowerCase() ? HOME_COUNTRY : s;
+}
+const isInternational = (c) => c !== HOME_COUNTRY;
+
+/** International phone in E.164 style: + and 8–15 digits. */
+function intlPhone(value) {
+  const digits = String(value ?? "").replace(/[^\d]/g, "");
+  if (!/^\+?[\d\s()-]{8,22}$/.test(String(value ?? "").trim()) || digits.length < 8 || digits.length > 15 || digits.startsWith("0")) {
+    throw new v.ValidationError("Enter your phone number with the country code, e.g. +1 415 555 0100", "phone");
+  }
+  return `+${digits}`;
+}
+
+function postalCode(value) {
+  const s = v.clean(value, 12).toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9 -]{1,11}$/.test(s)) throw new v.ValidationError("Enter a valid postal / ZIP code", "pincode");
+  return s;
+}
+
 /** Checkout form. Only variant ids + quantities are taken from the cart. */
 function order(b) {
   const items = normaliseItems(b.items);
   if (!items.length) throw new v.ValidationError("Your cart is empty", "items");
+  const ctry = country(b.country);
+  const intl = isInternational(ctry);
   const ful = v.oneOf(b.fulfillment, "Fulfilment", FULFILLMENT_TYPES);
   const paymentMethod = v.oneOf(String(b.paymentMethod || "").toUpperCase(), "Payment method", PAYMENT_METHODS);
-  if (paymentMethod === "STORE" && ful !== "pickup") throw new v.ValidationError("Pay at store is only available for store pickup", "paymentMethod");
+  if (intl) {
+    if (ful !== "delivery") throw new v.ValidationError("Orders from outside India are shipped to you", "fulfillment");
+    if (paymentMethod !== "INTL") throw new v.ValidationError("For orders outside India we email you a secure payment link", "paymentMethod");
+  } else {
+    if (paymentMethod === "INTL") throw new v.ValidationError("Choose UPI or pay at store for orders in India", "paymentMethod");
+    if (paymentMethod === "STORE" && ful !== "pickup") throw new v.ValidationError("Pay at store is only available for store pickup", "paymentMethod");
+  }
   return {
     items,
     name: v.str(b.name, "Name", { required: true, min: 2, max: 120 }),
-    phone: v.phone(b.phone),
+    phone: intl ? intlPhone(b.phone) : v.phone(b.phone),
+    email: v.email(b.email, "Email", intl) || null, // required abroad: payment link and shipping quote go by email
+    country: ctry,
     fulfillment: ful,
     paymentMethod,
     address: ful === "delivery" ? v.str(b.address, "Delivery address", { required: true, min: 8, max: 500 }) : null,
-    pincode: ful === "delivery" ? v.pincode(b.pincode) : null,
+    pincode: ful === "delivery" ? (intl ? postalCode(b.pincode) : v.pincode(b.pincode)) : null,
     notes: v.str(b.notes, "Notes", { max: 500 }) || null,
     couponCode: v.clean(b.couponCode, 40).toUpperCase() || null,
   };
@@ -162,6 +195,10 @@ function settings(b) {
     store_address: v.str(b.store_address, "Store address", { required: true, max: 300 }),
     store_phone: v.str(b.store_phone, "Store phone", { required: true, max: 30 }),
     whatsapp_number: waDigits || "917799228444",
+    store_phone_2: v.str(b.store_phone_2, "Second phone", { max: 30 }),
+    email_primary: v.email(b.email_primary, "Main email", false),
+    email_info: v.email(b.email_info, "Info email", false),
+    email_support: v.email(b.email_support, "Support email", false),
     store_hours: v.str(b.store_hours, "Store hours", { max: 120 }),
     maps_url: v.url(b.maps_url, "Google Maps link"),
     upi_id: v.str(b.upi_id, "UPI ID", { max: 80 }),
@@ -217,6 +254,8 @@ module.exports = {
   address,
   cartQuantity,
   fulfillment,
+  country,
+  isInternational,
   order,
   category,
   product,

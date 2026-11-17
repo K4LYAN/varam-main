@@ -10,8 +10,14 @@ const { badRequest } = require("../utils/httpError");
 
 /** Live totals for the cart drawer — always priced from the database. */
 async function quoteCart(req, res) {
+  let country = "India";
+  try {
+    country = validate.country(req.body.country);
+  } catch {
+    country = "India"; // a half-typed country never breaks the live total
+  }
   const q = await quote(
-    { items: req.body.items, couponCode: clean(req.body.couponCode, 40), fulfillment: validate.fulfillment(req.body.fulfillment) },
+    { items: req.body.items, couponCode: clean(req.body.couponCode, 40), fulfillment: validate.fulfillment(req.body.fulfillment), country },
     await settingsService.getSettings(),
   );
   res.json(publicQuote(q));
@@ -33,6 +39,8 @@ async function placeOrder(req, res) {
     upiId: input.paymentMethod === "UPI" ? settings.upi_id || "" : "",
     paymentMethod: input.paymentMethod,
     fulfillment: input.fulfillment,
+    country: input.country,
+    international: input.country !== "India",
   });
 }
 

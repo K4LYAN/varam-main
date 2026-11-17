@@ -79,6 +79,8 @@ function publicSettings(s) {
     storeAddress: s.store_address,
     storePhone: s.store_phone,
     whatsappNumber: s.whatsapp_number,
+    storePhone2: s.store_phone_2 || "",
+    emails: { primary: s.email_primary || "", info: s.email_info || "", support: s.email_support || "" },
     storeHours: s.store_hours,
     mapsUrl: s.maps_url,
     upiId: s.upi_id,
