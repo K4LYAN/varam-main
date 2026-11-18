@@ -23,9 +23,16 @@ if (!isProd && !env.DB_HOST && !env.DB_SOCKET) {
   }
 }
 
+// Setup problems are collected instead of thrown, so the server can still start and
+// show the owner exactly what is missing (names only, never values) instead of crash-looping.
+const problems = [];
+
 function required(name, fallback) {
   const v = env[name] ?? fallback;
-  if (v === undefined || v === "") throw new Error(`Missing required environment variable ${name}`);
+  if (v === undefined || v === "") {
+    problems.push(`${name} is not set`);
+    return "";
+  }
   return v;
 }
 
@@ -33,19 +40,24 @@ function intEnv(name, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER } = {})
   const raw = env[name];
   if (raw === undefined || raw === "") return fallback;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < min || n > max) throw new Error(`${name} must be a whole number between ${min} and ${max}`);
+  if (!Number.isInteger(n) || n < min || n > max) {
+    problems.push(`${name} must be a whole number between ${min} and ${max}`);
+    return fallback;
+  }
   return n;
 }
 
 const jwtSecret = env.JWT_SECRET || (isProd ? "" : "dev-only-insecure-secret-change-me-0123456789");
 if (!jwtSecret || jwtSecret.length < 32) {
-  throw new Error("JWT_SECRET must be set to a random string of at least 32 characters.");
+  problems.push("JWT_SECRET must be set to a random string of at least 32 characters");
 }
 
 const connectionLimit = intEnv("DB_POOL_SIZE", 10, { min: 1, max: 50 });
 
 module.exports = Object.freeze({
   isProd,
+  problems,
+  isVercel: Boolean(env.VERCEL),
   root: ROOT,
   port: intEnv("PORT", 3000, { min: 1, max: 65535 }),
   siteUrl: (env.SITE_URL || "http://localhost:3000").replace(/\/$/, ""),
@@ -72,7 +84,8 @@ module.exports = Object.freeze({
     password: env.ADMIN_PASSWORD || "",
     name: env.ADMIN_NAME || "Varam Admin",
   }),
-  uploadDir: env.UPLOAD_DIR || path.join(ROOT, "public", "uploads"),
+  // Vercel's file system is read-only except /tmp (and /tmp is wiped between instances)
+  uploadDir: env.UPLOAD_DIR || (env.VERCEL ? "/tmp/varam-uploads" : path.join(ROOT, "public", "uploads")),
   maxUploadBytes: 3 * 1024 * 1024,
   // In-process caches (each Passenger worker has its own; keep TTLs short)
   catalogCacheMs: intEnv("CATALOG_CACHE_MS", 10000, { min: 0, max: 300000 }),

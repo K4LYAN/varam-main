@@ -180,3 +180,26 @@ npm test           # 20 end-to-end checks against a fresh MySQL
 
 ## Security summary
 bcrypt password hashing (cost 12) · JWT in HTTP-only, SameSite=Lax cookies (Secure in production); a password change revokes every other session (`token_version`) · role checked from the database on every request · CSRF: same-origin check **and** double-submit token on every state-changing API call · rate limits on login (failed attempts), registration, password change, orders and uploads · parameterised SQL everywhere · server-side validation · prices, discounts and totals always recomputed from MySQL (client values ignored) · stock locked with `SELECT … FOR UPDATE` and decremented with a guarded `UPDATE … WHERE stock_qty >= ?` inside the order transaction · coupon usage limits enforced inside the same transaction · random, non-sequential order numbers plus ownership check or HMAC-signed link for invoices · uploads verified by file signature · strict Content-Security-Policy (no inline scripts or `<style>` tags) · every admin price/stock/coupon/settings/order-status change written to `admin_audit_logs` · stack traces never sent to clients.
+
+## Deploying
+
+The server now starts even when something is misconfigured. Instead of crashing, every page shows
+**"The store is not ready yet"** with the exact problem (missing setting names or the MySQL error,
+never secret values), and the database is retried every 15 seconds.
+
+### MilesWeb mPanel (Node.js app)
+1. **Application root / working directory** must not start with a space (e.g. ` deploys/...` is wrong).
+2. Start command: `npm start`. Port: `3000` (or whatever the panel passes in `PORT`).
+3. Environment variables (Node.js app → Environment): `NODE_ENV=production`, `JWT_SECRET` (32+ random
+   characters), `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `SITE_URL`. The `.env` file is
+   not in Git, so these must be set in the panel.
+4. mPanel deploys every commit into a new `deploys/<commit>` folder, so set
+   `UPLOAD_DIR=/home/<user>/varam-uploads` or uploaded product photos disappear on each deploy.
+
+### Vercel
+1. Import the GitHub repo. `vercel.json` routes every request to `api/index.js`.
+2. Add the same environment variables in Vercel → Settings → Environment Variables.
+3. The MySQL server must accept connections from the internet (MilesWeb's database usually does not;
+   use a cloud MySQL such as Aiven, TiDB Cloud or Railway).
+4. Product photo uploads are only kept temporarily on Vercel (`/tmp`). Upload photos where they persist,
+   or use image links (https://…) in Admin → Products.
