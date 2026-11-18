@@ -3,9 +3,19 @@
 const fs = require("fs");
 const path = require("path");
 
-require("dotenv").config({ quiet: true });
-
 const ROOT = path.join(__dirname, "..", "..");
+
+// Settings file. Hosts like MilesWeb mPanel deploy each commit into a fresh
+// <app>/deploys/<commit>/ folder, so a .env inside the code would be lost on every
+// deploy. The first file found wins; real environment variables always take priority.
+const ENV_FILES = [
+  process.env.VARAM_ENV_FILE,
+  path.join(ROOT, ".env"),
+  path.join(ROOT, "..", "..", ".env"), // <app>/.env, next to the deploys/ folder
+  path.join(require("os").homedir(), "varam.env"), // ~/varam.env
+].filter(Boolean);
+const envFile = ENV_FILES.find((f) => fs.existsSync(f));
+if (envFile) require("dotenv").config({ path: envFile, quiet: true });
 const env = process.env;
 const isProd = env.NODE_ENV === "production";
 
@@ -57,6 +67,7 @@ const connectionLimit = intEnv("DB_POOL_SIZE", 10, { min: 1, max: 50 });
 module.exports = Object.freeze({
   isProd,
   problems,
+  envFile: envFile || null,
   isVercel: Boolean(env.VERCEL),
   root: ROOT,
   port: intEnv("PORT", 3000, { min: 1, max: 65535 }),

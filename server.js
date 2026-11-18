@@ -19,6 +19,7 @@ let server = null;
 let shuttingDown = false;
 
 async function start() {
+  console.log(config.envFile ? `[server] settings file: ${config.envFile}` : "[server] no settings file found (using panel environment variables only)");
   if (config.problems.length) console.error(`[server] setup needed: ${config.problems.join("; ")}`);
   await new Promise((resolve, reject) => {
     server = http.createServer(boot.handle);
