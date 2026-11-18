@@ -1968,3 +1968,39 @@ h4 {
 img {
   height: auto;
 }
+
+/* ---------- Utility marquee ---------- */
+.utility { overflow: hidden; font-size: 13px; }
+.utility .marquee { display: flex; width: max-content; animation: varam-marquee 45s linear infinite; }
+.utility:hover .marquee, .utility:focus-within .marquee { animation-play-state: paused; }
+.marquee-track { display: flex; align-items: center; gap: 22px; padding: 9px 11px; white-space: nowrap; }
+.marquee-track a, .marquee-track span { display: inline-flex; align-items: center; }
+.marquee-track .dot { font-style: normal; color: #c99a3b; font-size: 10px; }
+@keyframes varam-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .utility .marquee { animation: none; }
+  .utility .marquee-track[aria-hidden] { display: none; }
+}
+
+/* ---------- Compact footer ---------- */
+.site-footer { padding: 52px 0 22px; }
+.site-footer .cols { gap: 24px 20px; grid-template-columns: 1fr 1fr; }
+.site-footer .cols > div:first-child { grid-column: 1 / -1; }
+.site-footer .f-contact { grid-column: 1 / -1; }
+.site-footer .f-about { margin-top: 10px; font-size: 14px; max-width: 320px; }
+.site-footer h4 { margin-bottom: 10px; }
+.site-footer ul { gap: 6px; }
+.site-footer .legal { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; font-size: 12.5px; margin-top: 24px; padding-top: 16px; }
+@media (min-width: 700px) {
+  .site-footer .cols { grid-template-columns: 1.3fr 1fr 1fr 1.3fr; }
+  .site-footer .cols > div:first-child, .site-footer .f-contact { grid-column: auto; }
+}
+
+/* ---------- Product page: perks and tabs ---------- */
+.perks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 380px) { .perks { grid-template-columns: 1fr; } }
+.tab-list { scrollbar-width: none; }
+.tab-list::-webkit-scrollbar { display: none; }
+.tab-list button { flex: 1 1 0; white-space: nowrap; padding: 14px 12px; }
+.marquee-track, .marquee-track * { font-family: var(--body, inherit); font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; }
+.marquee-track svg { width: 14px; height: 14px; margin-right: 6px; flex-shrink: 0; }

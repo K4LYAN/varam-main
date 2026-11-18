@@ -403,6 +403,18 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     return "tel:+91" + String(p || "").replace(/\D/g, "").slice(-10);
   }
 
+  function utilityTrack(s, copy) {
+    const items = [
+      `<span>${I.pin}${esc(s.storeAddress)}</span>`,
+      `<a href="${telHref(s.storePhone)}"${copy ? ' tabindex="-1"' : ""}>${I.phone}${esc(s.storePhone)}</a>`,
+      s.storePhone2 ? `<a href="${telHref(s.storePhone2)}"${copy ? ' tabindex="-1"' : ""}>${I.phone}${esc(s.storePhone2)}</a>` : "",
+      s.emails?.primary ? `<a href="mailto:${esc(s.emails.primary)}"${copy ? ' tabindex="-1"' : ""}>${I.mail}${esc(s.emails.primary)}</a>` : "",
+      s.storeHours ? `<span>${I.clock}${esc(s.storeHours)}</span>` : "",
+      `<span>${I.globe}We ship across India &amp; worldwide</span>`,
+    ].filter(Boolean);
+    return `<div class="marquee-track"${copy ? ' aria-hidden="true"' : ""}>${items.join('<i class="dot" aria-hidden="true">✦</i>')}<i class="dot" aria-hidden="true">✦</i></div>`;
+  }
+
   function renderHeader() {
     const s = state.settings;
     const mount = $("#site-header");
@@ -412,12 +424,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       : `<a class="icon-btn account-btn" href="/login" aria-label="Login or create account">${I.user}<span>Login</span></a>`;
     mount.innerHTML = `
       <a class="skip" href="#main">Skip to content</a>
-      <div class="utility"><div class="container">
-        <div class="u-left"><span class="u-addr">${I.pin}${esc(s.storeAddress)}</span>
-          <a href="${telHref(s.storePhone)}">${I.phone}${esc(s.storePhone)}</a>
-          ${s.storePhone2 ? `<a class="u-hide" href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a>` : ""}</div>
-        ${s.emails && s.emails.primary ? `<a class="u-hide" href="mailto:${esc(s.emails.primary)}">${I.mail}${esc(s.emails.primary)}</a>` : `<span class="u-hide">${I.clock}${esc(s.storeHours)}</span>`}
-      </div></div>
+      <div class="utility" aria-label="Store contact"><div class="marquee">${utilityTrack(s)}${utilityTrack(s, true)}</div></div>
       ${s.announcement ? `<div class="announce">${esc(s.announcement)}</div>` : ""}
       <header class="site-header"><div class="container">
         <a class="brand" href="/" aria-label="Varam home"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
@@ -513,19 +520,18 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     mount.innerHTML = `<footer class="site-footer"><div class="container">
       <div class="cols">
         <div><a class="brand" href="/"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
-          <p style="margin-top:14px;font-size:14px;max-width:340px">Traditional cold-pressed (gaanuga) oils, pure ghee and natural honey from Vijayawada. Pure · Natural · Traditional.</p>
-          <span class="ships-note">${I.globe}We ship across India &amp; worldwide</span></div>
+          <p class="f-about">Cold-pressed oils, pure ghee and honey from Vijayawada.</p></div>
         <div><h4>Shop</h4><ul>${cats}</ul></div>
-        <div><h4>Help</h4><ul><li><a href="/faq">FAQ</a></li><li><a href="/#process">Our Process</a></li><li><a href="/#store">Contact &amp; Store</a></li><li><a href="/account">My Account</a></li>${
+        <div><h4>Help</h4><ul><li><a href="/faq">FAQ</a></li><li><a href="/#process">Our Process</a></li><li><a href="/#store">Visit our store</a></li><li><a href="/account">My Account</a></li>${
           s.instagramUrl ? `<li><a href="${esc(s.instagramUrl)}" target="_blank" rel="noopener">Instagram</a></li>` : ""
         }</ul></div>
-        <div><h4>Contact us</h4><ul class="footer-contact">
-          <li>${I.pin}<span>${esc(s.storeAddress)}</span></li>
-          <li>${I.phone}<span><a href="${telHref(s.storePhone)}">${esc(s.storePhone)}</a>${s.storePhone2 ? ` · <a href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a>` : ""}</span></li>
-          ${[s.emails?.primary, s.emails?.info, s.emails?.support].filter(Boolean).map((m) => `<li>${I.mail}<a href="mailto:${esc(m)}">${esc(m)}</a></li>`).join("")}
-          <li>${I.clock}<span>${esc(s.storeHours)}</span></li></ul></div>
+        <div class="f-contact"><h4>Contact</h4><ul class="footer-contact">
+          <li>${I.phone}<a href="${telHref(s.storePhone)}">${esc(s.storePhone)}</a></li>
+          ${s.storePhone2 ? `<li>${I.phone}<a href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a></li>` : ""}
+          ${s.emails?.primary ? `<li>${I.mail}<a href="mailto:${esc(s.emails.primary)}">${esc(s.emails.primary)}</a></li>` : ""}
+          <li>${I.pin}<span>BRTS Rd, Vijayawada</span></li></ul></div>
       </div>
-      <div class="legal"><span>© ${new Date().getFullYear()} Varam Organic Oil, Vijayawada</span><span>Prices in ₹. Delivery charges for India are shown at checkout; international shipping is quoted by email.</span></div>
+      <div class="legal"><span>© ${new Date().getFullYear()} Varam Organic Oil, Vijayawada</span><span>Shipping across India &amp; worldwide</span></div>
     </div></footer>
     <a class="wa-float" href="https://wa.me/${esc(s.whatsappNumber)}?text=${encodeURIComponent("Hello Varam! I'd like to know more about your oils.")}" target="_blank" rel="noopener" aria-label="Chat with Varam on WhatsApp">${I.wa}</a>`;
   }
