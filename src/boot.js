@@ -34,7 +34,9 @@ function describe(err) {
     ER_BAD_DB_ERROR: "DB_NAME does not exist. Create it in your hosting panel first.",
     ER_DBACCESS_DENIED_ERROR: "DB_USER has not been given access to DB_NAME.",
   };
-  return `${code}${hints[err.code] || err.message}`;
+  const db = config.db;
+  const tried = err.code && /^E[A-Z]+$/.test(err.code) ? ` [tried ${db.socket ? `socket ${db.socket} (${require("fs").existsSync(db.socket) ? "exists" : "not found"}), then ` : "no DB_SOCKET set, "}TCP ${db.host}:${db.port}]` : "";
+  return `${code}${hints[err.code] || err.message}${tried}`;
 }
 
 async function attempt() {
