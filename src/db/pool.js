@@ -62,7 +62,9 @@ async function connect() {
   } else if (config.db.socket) {
     console.warn(`[db] socket ${config.db.socket} not found; using TCP`);
   }
-  pool = await tryPool({ host: config.db.host, port: config.db.port }, `TCP ${config.db.host}:${config.db.port}`);
+  const tcp = { host: config.db.host, port: config.db.port };
+  if (config.db.ssl) tcp.ssl = { rejectUnauthorized: config.db.sslVerify, minVersion: "TLSv1.2" };
+  pool = await tryPool(tcp, `TCP ${config.db.host}:${config.db.port}${config.db.ssl ? " (TLS)" : ""}`);
   return pool;
 }
 

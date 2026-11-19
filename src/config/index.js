@@ -89,6 +89,11 @@ module.exports = Object.freeze({
     maxIdle: intEnv("DB_POOL_MAX_IDLE", Math.min(3, connectionLimit), { min: 0, max: connectionLimit }),
     queueLimit: intEnv("DB_QUEUE_LIMIT", 100, { min: 0, max: 10000 }),
     connectTimeout: intEnv("DB_CONNECT_TIMEOUT_MS", 10000, { min: 1000, max: 60000 }),
+    // DB_SSL=true encrypts the connection — use it when MySQL is reached over the internet (a remote
+    // DB_HOST). DB_SSL_VERIFY=true also checks the server certificate (needs a publicly trusted cert;
+    // shared-hosting MariaDB usually has a self-signed one, so verification is off by default).
+    ssl: ["1", "true", "yes", "required"].includes(String(env.DB_SSL || "").toLowerCase()),
+    sslVerify: ["1", "true", "yes"].includes(String(env.DB_SSL_VERIFY || "").toLowerCase()),
   }),
   admin: Object.freeze({
     email: (env.ADMIN_EMAIL || "").trim().toLowerCase(),
