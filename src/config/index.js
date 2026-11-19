@@ -15,6 +15,8 @@ const ENV_FILES = [
   path.join(require("os").homedir(), "varam.env"), // ~/varam.env
 ].filter(Boolean);
 const envFile = ENV_FILES.find((f) => fs.existsSync(f));
+// Names of DB_* variables set by the hosting panel (they override the settings file) — logged at start
+const panelDbVars = Object.keys(process.env).filter((k) => /^DB_/.test(k));
 if (envFile) require("dotenv").config({ path: envFile, quiet: true });
 const env = process.env;
 const isProd = env.NODE_ENV === "production";
@@ -68,6 +70,7 @@ module.exports = Object.freeze({
   isProd,
   problems,
   envFile: envFile || null,
+  panelDbVars,
   isVercel: Boolean(env.VERCEL),
   root: ROOT,
   port: intEnv("PORT", 3000, { min: 1, max: 65535 }),

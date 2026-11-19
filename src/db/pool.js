@@ -86,8 +86,11 @@ async function connect() {
       return pool;
     } catch (err) {
       lastErr = err;
-      attempts.push({ via: r.via, code: err.code || err.message });
-      console.warn(`[db] ${r.via} as ${config.db.user || "(no user)"} → ${err.code || err.message}`);
+      // MariaDB's own message names the user@host it saw (e.g. 'varams_i1_varam'@'10.169.9.189'),
+      // which is exactly the host that has to be allowed in the panel. No secrets are in it.
+      const seen = (err.sqlMessage || "").match(/for user '[^']*'@'[^']*'/);
+      attempts.push({ via: r.via, code: err.code || err.message, seen: seen ? seen[0].slice(9) : "" });
+      console.warn(`[db] ${r.via} as ${config.db.user || "(no user)"} → ${err.code || err.message}${seen ? ` (server saw ${seen[0].slice(9)})` : ""}`);
     }
   }
   const err = lastErr || new Error("No database route configured (set DB_HOST or DB_SOCKET)");

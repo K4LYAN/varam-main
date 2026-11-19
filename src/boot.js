@@ -36,7 +36,7 @@ function describe(err) {
   };
   const db = config.db;
   const who = ` [user ${db.user || "(not set)"}, database ${db.database || "(not set)"}]`;
-  const tried = err.attempts && err.attempts.length ? ` Tried: ${err.attempts.map((a) => `${a.via} → ${a.code}`).join("; ")}.` : "";
+  const tried = err.attempts && err.attempts.length ? ` Tried: ${err.attempts.map((a) => `${a.via} → ${a.code}${a.seen ? ` as ${a.seen}` : ""}`).join("; ")}.` : "";
   const extra =
     err.code === "ER_ACCESS_DENIED_ERROR"
       ? " MariaDB checks user@host: a socket login is user@localhost and TCP to 127.0.0.1 is user@127.0.0.1 — allow that host for this user in the panel, and check the user name has no typo."
