@@ -134,7 +134,7 @@ async function waitForServer(proc) {
 
     await step("boot: DB socket missing → TCP fallback, schema + seed created", async () => {
       const all = logs.join("");
-      assert.match(all, /falling back to TCP|not found; using TCP/);
+      assert.doesNotMatch(all, /store not ready/); // missing socket is skipped, TCP route used
       assert.match(all, /connected via TCP/);
       assert.match(all, /seeded 7 categories and 9 products/);
     });

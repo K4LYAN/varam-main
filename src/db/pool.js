@@ -47,25 +47,52 @@ async function tryPool(options, label) {
 }
 
 /**
- * Connect to MySQL. On MilesWeb the Unix socket is tried first
- * (DB_SOCKET=/run/mysqld/mysqld.sock), falling back to TCP (DB_HOST/DB_PORT).
+ * Every route to try, in order. "localhost" is ambiguous: MariaDB treats a socket login as
+ * user@localhost, and Node may resolve the name to IPv6 ::1 — neither matches a user that
+ * is only allowed from 127.0.0.1 (MilesWeb's default). So localhost is tried as 127.0.0.1,
+ * and DB_HOST may list several hosts separated by commas (e.g. "127.0.0.1,10.169.9.188").
+ */
+function routes() {
+  const list = [];
+  if (config.db.socket) list.push({ via: `socket ${config.db.socket}`, options: { socketPath: config.db.socket }, missing: !fs.existsSync(config.db.socket) });
+  const hosts = String(config.db.host || "127.0.0.1")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean)
+    .map((h) => (h.toLowerCase() === "localhost" ? "127.0.0.1" : h));
+  for (const host of [...new Set(hosts)]) {
+    const options = { host, port: config.db.port };
+    if (config.db.ssl) options.ssl = { rejectUnauthorized: config.db.sslVerify, minVersion: "TLSv1.2" };
+    list.push({ via: `TCP ${host}:${config.db.port}${config.db.ssl ? " (TLS)" : ""}`, options });
+  }
+  return list;
+}
+
+/**
+ * Connect to MySQL, trying each route until one works. If all fail, the error carries
+ * `attempts` (route + error code for each) so the log shows exactly what was refused.
  */
 async function connect() {
   if (pool) return pool;
-  if (config.db.socket && fs.existsSync(config.db.socket)) {
+  const attempts = [];
+  let lastErr = null;
+  for (const r of routes()) {
+    if (r.missing) {
+      attempts.push({ via: r.via, code: "NOT_FOUND" });
+      continue;
+    }
     try {
-      pool = await tryPool({ socketPath: config.db.socket }, `socket ${config.db.socket}`);
+      pool = await tryPool(r.options, r.via);
       return pool;
     } catch (err) {
-      console.warn(`[db] socket connection failed (${err.code || err.message}); falling back to TCP`);
+      lastErr = err;
+      attempts.push({ via: r.via, code: err.code || err.message });
+      console.warn(`[db] ${r.via} as ${config.db.user || "(no user)"} → ${err.code || err.message}`);
     }
-  } else if (config.db.socket) {
-    console.warn(`[db] socket ${config.db.socket} not found; using TCP`);
   }
-  const tcp = { host: config.db.host, port: config.db.port };
-  if (config.db.ssl) tcp.ssl = { rejectUnauthorized: config.db.sslVerify, minVersion: "TLSv1.2" };
-  pool = await tryPool(tcp, `TCP ${config.db.host}:${config.db.port}${config.db.ssl ? " (TLS)" : ""}`);
-  return pool;
+  const err = lastErr || new Error("No database route configured (set DB_HOST or DB_SOCKET)");
+  err.attempts = attempts;
+  throw err;
 }
 
 function db() {

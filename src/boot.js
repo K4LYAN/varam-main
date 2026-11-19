@@ -35,8 +35,13 @@ function describe(err) {
     ER_DBACCESS_DENIED_ERROR: "DB_USER has not been given access to DB_NAME.",
   };
   const db = config.db;
-  const tried = err.code && /^E[A-Z]+$/.test(err.code) ? ` [tried ${db.socket ? `socket ${db.socket} (${require("fs").existsSync(db.socket) ? "exists" : "not found"}), then ` : "no DB_SOCKET set, "}TCP ${db.host}:${db.port}]` : "";
-  return `${code}${hints[err.code] || err.message}${tried}`;
+  const who = ` [user ${db.user || "(not set)"}, database ${db.database || "(not set)"}]`;
+  const tried = err.attempts && err.attempts.length ? ` Tried: ${err.attempts.map((a) => `${a.via} → ${a.code}`).join("; ")}.` : "";
+  const extra =
+    err.code === "ER_ACCESS_DENIED_ERROR"
+      ? " MariaDB checks user@host: a socket login is user@localhost and TCP to 127.0.0.1 is user@127.0.0.1 — allow that host for this user in the panel, and check the user name has no typo."
+      : "";
+  return `${code}${hints[err.code] || err.message}${who}${tried}${extra}`;
 }
 
 async function attempt() {
