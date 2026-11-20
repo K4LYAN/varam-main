@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "varam",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["--watch", "server.js"],
-      "port": 3000
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4200", "--bind", "127.0.0.1"],
+      "port": 4200,
+      "autoPort": false
     }
   ]
 }

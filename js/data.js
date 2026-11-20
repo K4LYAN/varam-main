@@ -1,0 +1,337 @@
+/* Varam static site — products, prices, contact details and coupons.
+   Edit prices, stock, contact details or coupons here; the pages read this file. */
+window.VARAM_DATA = {
+  "generatedAt": "2026-11-20T09:59:58.178Z",
+  "catalog": {
+    "products": [
+      {
+        "id": 1,
+        "name": "Cold-Pressed Groundnut Oil",
+        "slug": "wood-pressed-groundnut-oil",
+        "tagline": "Golden and nutty — the everyday oil of Andhra kitchens.",
+        "description": "Cold-pressed slowly from groundnuts in a traditional wooden ghani (gaanuga), then left to settle naturally before bottling. Rich nutty aroma for tempering, curries, chutneys and everyday home cooking.",
+        "imageUrl": "",
+        "accentColor": "#D7A436",
+        "badgeText": "Bestseller",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": true,
+        "category": {
+          "slug": "groundnut-oil",
+          "name": "Groundnut Oil"
+        },
+        "variants": [
+          {
+            "id": 1,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-GN-1LITRE",
+            "price": 370,
+            "mrp": 370,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Cold-Pressed White Sesame Oil",
+        "slug": "wood-pressed-white-sesame-oil",
+        "tagline": "Traditional gingelly (nuvvula nune) with a gentle aroma.",
+        "description": "Cold-pressed in a wooden ghani from white sesame seeds — a staple for pickles, podis, pulusu and traditional South Indian recipes.",
+        "imageUrl": "",
+        "accentColor": "#D6A13A",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": true,
+        "category": {
+          "slug": "sesame-oil",
+          "name": "Sesame Oil"
+        },
+        "variants": [
+          {
+            "id": 2,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-WS-1LITRE",
+            "price": 550,
+            "mrp": 550,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Cold-Pressed Coconut Oil",
+        "slug": "wood-pressed-coconut-oil",
+        "tagline": "Clear, fragrant oil from mature coconuts.",
+        "description": "Cold-pressed in a wooden ghani from mature coconuts. Naturally fragrant; it may solidify in cool weather — keep the bottle somewhere warm to liquefy.",
+        "imageUrl": "",
+        "accentColor": "#EFE3BF",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": true,
+        "category": {
+          "slug": "coconut-oil",
+          "name": "Coconut Oil"
+        },
+        "variants": [
+          {
+            "id": 4,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-CO-1LITRE",
+            "price": 700,
+            "mrp": 700,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Cold-Pressed Mustard Oil (Kachi Ghani)",
+        "slug": "kachi-ghani-mustard-oil",
+        "tagline": "Bold and pungent — made for pickles and curries.",
+        "description": "Cold, slow-pressed (kachi ghani) from mustard seeds, with the bold pungency that defines North and East Indian dishes and Andhra avakaya.",
+        "imageUrl": "",
+        "accentColor": "#C18414",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": true,
+        "category": {
+          "slug": "mustard-oil",
+          "name": "Mustard Oil"
+        },
+        "variants": [
+          {
+            "id": 5,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-MU-1LITRE",
+            "price": 480,
+            "mrp": 480,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "name": "Pure Ghee",
+        "slug": "pure-ghee",
+        "tagline": "Golden, aromatic ghee prepared the traditional way.",
+        "description": "Butter heated slowly until clear and golden, then filtered — for rice and dal, sweets, rotis and pooja.",
+        "imageUrl": "",
+        "accentColor": "#E9B949",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": true,
+        "category": {
+          "slug": "ghee",
+          "name": "Ghee"
+        },
+        "variants": [
+          {
+            "id": 8,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-GH-1LITRE",
+            "price": 800,
+            "mrp": 800,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Cold-Pressed Black Sesame Oil",
+        "slug": "wood-pressed-black-sesame-oil",
+        "tagline": "Deep, earthy oil from black sesame seeds.",
+        "description": "Cold-pressed in a wooden ghani from black sesame seeds; darker and more robust than white sesame oil. Used in traditional recipes and also traditionally for oil massage.",
+        "imageUrl": "",
+        "accentColor": "#7B4B1F",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": false,
+        "category": {
+          "slug": "sesame-oil",
+          "name": "Sesame Oil"
+        },
+        "variants": [
+          {
+            "id": 3,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-BS-1LITRE",
+            "price": 520,
+            "mrp": 520,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Cold-Pressed Sunflower Oil",
+        "slug": "wood-pressed-sunflower-oil",
+        "tagline": "Light and mild for everyday cooking.",
+        "description": "Cold-pressed in a wooden ghani from sunflower seeds — light in colour and mild in flavour for everyday cooking.",
+        "imageUrl": "",
+        "accentColor": "#E6C14C",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": false,
+        "category": {
+          "slug": "other-oils",
+          "name": "Other Oils"
+        },
+        "variants": [
+          {
+            "id": 6,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-SF-1LITRE",
+            "price": 550,
+            "mrp": 550,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "name": "Cold-Pressed Castor Oil",
+        "slug": "pure-castor-oil",
+        "tagline": "Thick, traditional castor (amudam) oil.",
+        "description": "Cold-pressed from castor seeds. Traditionally used in hair and skin care routines and for lamps. Please follow the label for usage.",
+        "imageUrl": "",
+        "accentColor": "#E8D9A0",
+        "badgeText": "",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": false,
+        "category": {
+          "slug": "other-oils",
+          "name": "Other Oils"
+        },
+        "variants": [
+          {
+            "id": 7,
+            "sizeLabel": "1 Litre",
+            "sku": "VRM-CA-1LITRE",
+            "price": 480,
+            "mrp": 480,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "name": "Pure Honey",
+        "slug": "pure-honey",
+        "tagline": "Thick, golden natural honey.",
+        "description": "Golden natural honey with a rich, floral sweetness — for breakfast, warm drinks and desserts. May crystallise naturally; stand the jar in warm water to make it runny.",
+        "imageUrl": "",
+        "accentColor": "#D88F14",
+        "badgeText": "New",
+        "rating": 0,
+        "reviewCount": 0,
+        "isFeatured": false,
+        "category": {
+          "slug": "honey",
+          "name": "Honey"
+        },
+        "variants": [
+          {
+            "id": 9,
+            "sizeLabel": "1 Kg",
+            "sku": "VRM-HO-1KG",
+            "price": 1000,
+            "mrp": 1000,
+            "stockQty": 50,
+            "stockStatus": "in"
+          }
+        ]
+      }
+    ],
+    "categories": [
+      {
+        "name": "Groundnut Oil",
+        "slug": "groundnut-oil",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><ellipse cx=\"12\" cy=\"12\" rx=\"5\" ry=\"8\"/><path d=\"M12 4v16\"/></svg>",
+        "count": 1
+      },
+      {
+        "name": "Sesame Oil",
+        "slug": "sesame-oil",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M12 3c3.5 4.6 5.5 8 5.5 11a5.5 5.5 0 0 1-11 0c0-3 2-6.4 5.5-11Z\"/></svg>",
+        "count": 2
+      },
+      {
+        "name": "Coconut Oil",
+        "slug": "coconut-oil",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><circle cx=\"12\" cy=\"13\" r=\"7\"/><circle cx=\"10\" cy=\"11\" r=\".8\" fill=\"currentColor\"/><circle cx=\"14\" cy=\"11\" r=\".8\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"14\" r=\".8\" fill=\"currentColor\"/></svg>",
+        "count": 1
+      },
+      {
+        "name": "Mustard Oil",
+        "slug": "mustard-oil",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8\"/></svg>",
+        "count": 1
+      },
+      {
+        "name": "Other Oils",
+        "slug": "other-oils",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M5 19c0-8 5-13 14-14-1 9-6 14-14 14Z\"/><path d=\"M5 19 13 11\"/></svg>",
+        "count": 2
+      },
+      {
+        "name": "Ghee",
+        "slug": "ghee",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><rect x=\"6\" y=\"7\" width=\"12\" height=\"13\" rx=\"3\"/><path d=\"M8 4h8v3H8z\"/></svg>",
+        "count": 1
+      },
+      {
+        "name": "Honey",
+        "slug": "honey",
+        "iconSvg": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"><path d=\"M12 3 19 7v10l-7 4-7-4V7z\"/><path d=\"M12 8v8\"/></svg>",
+        "count": 1
+      }
+    ]
+  },
+  "settings": {
+    "announcement": "Free home delivery on orders above ₹999 · Free pickup at our Vijayawada store",
+    "freeDeliveryThreshold": 999,
+    "deliveryFee": 60,
+    "storeName": "Varam Organic Oil (గానుగ నూనె)",
+    "storeAddress": "BRTS Rd, Lakshmi Nagar, Satyaranayana Puram, Vijayawada, Andhra Pradesh 520011",
+    "storePhone": "077992 28444",
+    "whatsappNumber": "917799228444",
+    "storePhone2": "+91 95157 18720",
+    "emails": {
+      "primary": "varam@varams.in",
+      "info": "info@varams.in",
+      "support": "support@varams.in"
+    },
+    "storeHours": "Open every day · 8:00 AM – 9:30 PM",
+    "mapsUrl": "https://maps.google.com/?cid=7883840299429229573",
+    "upiId": "",
+    "instagramUrl": "https://www.instagram.com/varamorganicoil_india/",
+    "googleRating": 4.9,
+    "googleReviewCount": 19,
+    "googleReviewsUrl": "https://maps.google.com/?cid=7883840299429229573",
+    "testimonials": []
+  },
+  "coupons": [
+    {
+      "code": "VARAM10",
+      "discountType": "percent",
+      "discountValue": 10,
+      "minOrderAmount": 0,
+      "expiresAt": null
+    }
+  ]
+};

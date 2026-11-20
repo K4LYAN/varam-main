@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://varams.in/sitemap.xml
