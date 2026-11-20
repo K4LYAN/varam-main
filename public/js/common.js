@@ -419,9 +419,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const s = state.settings;
     const mount = $("#site-header");
     if (!mount || !s) return;
-    const account = state.user
-      ? `<a class="icon-btn account-btn" href="${state.user.role === "admin" ? "/admin" : "/account"}" aria-label="My account">${I.user}<span>${esc(state.user.name.split(" ")[0])}</span></a>`
-      : `<a class="icon-btn account-btn" href="/login" aria-label="Login or create account">${I.user}<span>Login</span></a>`;
+    const account = state.user?.role === "admin" ? `<a class="icon-btn account-btn" href="/admin" aria-label="Admin">${I.user}<span>Admin</span></a>` : "";
     mount.innerHTML = `
       <a class="skip" href="#main">Skip to content</a>
       <div class="utility" aria-label="Store contact"><div class="marquee">${utilityTrack(s)}${utilityTrack(s, true)}</div></div>
@@ -440,7 +438,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       <nav class="mobile-nav hidden" id="mobile-nav" aria-label="Mobile">
         <div class="mobile-search header-search" style="display:block;max-width:none">${I.search}<input type="search" id="mobile-search" placeholder="Search products…" aria-label="Search products"></div>
         ${NAV.map((n) => `<a href="${n.href}">${n.label}</a>`).join("")}
-        <a href="${state.user ? "/account" : "/login"}">${state.user ? "My Account" : "Login / Register"}</a>
       </nav></header>`;
 
     const menuBtn = $(".menu-btn", mount);
@@ -522,7 +519,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         <div><a class="brand" href="/"><img src="/img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
           <p class="f-about">Cold-pressed oils, pure ghee and honey from Vijayawada.</p></div>
         <div><h4>Shop</h4><ul>${cats}</ul></div>
-        <div><h4>Help</h4><ul><li><a href="/faq">FAQ</a></li><li><a href="/#process">Our Process</a></li><li><a href="/#store">Visit our store</a></li><li><a href="/account">My Account</a></li>${
+        <div><h4>Help</h4><ul><li><a href="/faq">FAQ</a></li><li><a href="/#process">Our Process</a></li><li><a href="/#store">Visit our store</a></li>${
           s.instagramUrl ? `<li><a href="${esc(s.instagramUrl)}" target="_blank" rel="noopener">Instagram</a></li>` : ""
         }</ul></div>
         <div class="f-contact"><h4>Contact</h4><ul class="footer-contact">
@@ -999,10 +996,10 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
 
   const Wishlist = {
     ids: new Set(),
+    // Kept on this device only (there are no customer accounts)
     async load() {
-      if (!state.user) return;
       try {
-        this.ids = new Set((await api("GET", "/api/account/wishlist")).productIds);
+        this.ids = new Set(JSON.parse(localStorage.getItem("varam:wishlist") || "[]").map(Number));
       } catch {
         this.ids = new Set();
       }
@@ -1015,17 +1012,12 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       $$("[data-wish]", root).forEach((b) => b.setAttribute("aria-pressed", String(this.has(b.dataset.wish))));
     },
     async toggle(productId, btn) {
-      if (!state.user) {
-        toast("Sign in to save your favourites", {
-          action: { label: "Sign in", onClick: () => (location.href = "/login?next=" + encodeURIComponent(location.pathname)) },
-        });
-        return;
-      }
       const id = Number(productId);
       const on = !this.has(id);
       try {
-        const r = await api(on ? "POST" : "DELETE", `/api/account/wishlist/${id}`);
-        this.ids = new Set(r.productIds);
+        if (on) this.ids.add(id);
+        else this.ids.delete(id);
+        localStorage.setItem("varam:wishlist", JSON.stringify([...this.ids]));
         this.paint();
         if (btn) {
           btn.classList.remove("pop");

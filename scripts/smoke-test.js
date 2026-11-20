@@ -139,10 +139,10 @@ async function waitForServer(proc) {
       assert.match(all, /seeded 7 categories and 9 products/);
     });
 
-    await step("pages render (/, /login, /register, robots, 404)", async () => {
-      for (const u of ["/", "/login", "/register", "/robots.txt"]) assert.equal((await guest("GET", u)).status, 200, u);
+    await step("pages render (/, robots, 404; old login pages redirect home)", async () => {
+      for (const u of ["/", "/robots.txt"]) assert.equal((await guest("GET", u)).status, 200, u);
       assert.equal((await guest("GET", "/nope")).status, 404);
-      assert.equal((await guest("GET", "/account")).status, 302);
+      for (const u of ["/login", "/register", "/account"]) assert.equal((await guest("GET", u)).status, 301, u);
     });
 
     await step("catalog: 9 products with VARAM's real prices", async () => {
@@ -628,8 +628,6 @@ async function waitForServer(proc) {
       assert.match(pdp.data, /<title>Pure Ghee – ₹/);
       assert.match(pdp.data, /"@type":"Product"/);
       assert.match(pdp.data, /"@type":"BreadcrumbList"/);
-      const login = await guest("GET", "/login");
-      assert.match(login.data, /noindex/);
       const map = await guest("GET", "/sitemap.xml");
       assert.match(map.data, /\/faq<\/loc>/);
       assert.match(map.data, /\/product\/pure-ghee<\/loc>/);

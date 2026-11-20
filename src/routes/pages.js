@@ -2,7 +2,7 @@
 
 const express = require("express");
 const c = require("../controllers/pageController");
-const { requireUser, requireAdmin } = require("../middleware/auth");
+const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -10,9 +10,8 @@ router.get("/", c.home);
 router.get("/shop", c.shop);
 router.get("/faq", c.faqPage);
 router.get("/product/:slug", c.product);
-router.get("/login", c.login);
-router.get("/register", c.register);
-router.get("/account", requireUser, c.view("account.html"));
+// Customer accounts were removed: orders go through WhatsApp. Old links land on the home page.
+router.get(["/login", "/register", "/account"], (req, res) => res.redirect(301, "/"));
 
 router.get("/admin/login", c.adminLogin);
 router.get(["/admin", "/admin/products", "/admin/orders", "/admin/customers", "/admin/users", "/admin/settings"], requireAdmin, c.adminApp);

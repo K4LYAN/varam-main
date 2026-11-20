@@ -160,8 +160,6 @@ async function product(req, res) {
   });
 }
 
-const login = (req, res) => (req.user ? res.redirect("/account") : send(res, "login.html"));
-const register = (req, res) => (req.user ? res.redirect("/account") : send(res, "register.html"));
 const adminLogin = (req, res) => (req.user?.role === "admin" ? res.redirect("/admin") : send(res, "admin", "login.html"));
 
 function adminApp(_req, res) {
@@ -214,4 +212,4 @@ async function sitemap(_req, res) {
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
 }
 
-module.exports = { view, home, shop, faqPage, product, login, register, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };
+module.exports = { view, home, shop, faqPage, product, adminLogin, adminApp, invoice, packingSlip, robots, sitemap };
