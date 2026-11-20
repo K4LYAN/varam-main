@@ -18,6 +18,7 @@ Customers add products to the cart (kept in their browser), enter their details 
 | `css/` | Styles |
 | `img/` | Logo |
 | `sitemap.xml`, `robots.txt` | For search engines |
+| `server.js`, `package.json` | Optional file server for hosts that run `npm start` |
 
 ## Changing prices or products
 
@@ -34,5 +35,6 @@ Then open http://localhost:4200.
 
 ## Deploy
 
-- **MilesWeb (mPanel):** upload everything except `README.md` and `.claude/` into the domain's document root (usually `public_html`) with the File Manager or FTP. Remove the old Node.js application for the domain so it no longer answers requests.
+- **MilesWeb (mPanel) Node app:** nothing to change. mPanel runs `npm start`, which starts `server.js`, a tiny file server with no dependencies and no database. Old links such as `/shop` and `/product/<slug>` still work, and `/login`, `/account` and `/admin` redirect to the home page.
+- **Any static host (MilesWeb `public_html`, Vercel, Netlify, GitHub Pages):** upload the files, with no build command. `server.js` and `package.json` aren't needed there.
 - **Vercel / Netlify / GitHub Pages:** import the repository as a static site, with no build command and the repository root as the output folder.

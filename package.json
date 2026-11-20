@@ -1,0 +1,13 @@
+{
+  "name": "varam-static-site",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Varam Organic Oil — static website (optional zero-dependency Node server for Node hosts)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
