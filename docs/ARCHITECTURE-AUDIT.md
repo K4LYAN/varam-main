@@ -11,7 +11,7 @@ Scope: the Node.js + Express + MySQL store and admin panel as of commit `2f157d9
   - The guest-cart merge was already one atomic `ON DUPLICATE KEY UPDATE quantity = LEAST(…, 50)` per line.
 - **Security:**
   - helmet CSP; the user's role is re-read from MySQL on every request.
-  - Images are checked by their magic bytes; rate limits cover login, register and orders.
+  - Images are checked by their magic bytes; rate limits cover login and orders.
   - Invoices need an HMAC-signed link or ownership of the order.
 - **Infrastructure:** a central error handler (Express 5 catches async errors), and the Unix socket is tried first with a TCP fallback.
 

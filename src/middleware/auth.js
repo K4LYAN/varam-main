@@ -51,7 +51,7 @@ const isApi = (req) => req.originalUrl.startsWith("/api");
 function requireUser(req, res, next) {
   if (req.user) return next();
   if (isApi(req)) return next(unauthorized());
-  res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+  res.redirect("/");
 }
 
 function requireAdmin(req, res, next) {

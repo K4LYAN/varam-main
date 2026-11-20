@@ -192,7 +192,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     return null;
   }
 
-  /* ---------------- Cart (guest localStorage ⇄ MySQL when signed in) ---------------- */
+  /* ---------------- Cart (kept in this browser) ---------------- */
 
   const CART_KEY = "varam_cart_v1";
   const PREF_KEY = "varam_checkout_v1";
@@ -203,42 +203,21 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     quote: null,
     listeners: new Set(),
 
-    get signedIn() {
-      return Boolean(state.user);
-    },
     count() {
       return this.items.reduce((n, i) => n + i.quantity, 0);
     },
-    async load() {
-      if (this.signedIn) {
-        this.items = (await api("GET", "/api/cart")).items;
-      } else {
-        this.items = (store.get(CART_KEY, []) || []).filter((i) => Number(i.variantId) > 0 && Number(i.quantity) > 0);
-      }
+    load() {
+      this.items = (store.get(CART_KEY, []) || []).filter((i) => Number(i.variantId) > 0 && Number(i.quantity) > 0);
       this.changed(false);
     },
-    saveLocal() {
-      if (!this.signedIn) store.set(CART_KEY, this.items);
-    },
-    /**
-     * Optimistic update: the drawer and badge change instantly; for signed-in
-     * customers the server write is debounced per line and sent through one
-     * serial queue, so rapid +/− clicks become a single PUT carrying the final
-     * quantity and responses can never arrive out of order. On failure the
-     * cart rolls back to the server's copy.
-     */
     async setQty(variantId, quantity) {
       quantity = Math.max(0, Math.min(50, Math.floor(quantity)));
       const existing = this.items.find((i) => i.variantId === variantId);
       if (quantity === 0) this.items = this.items.filter((i) => i.variantId !== variantId);
       else if (existing) existing.quantity = quantity;
       else this.items.push({ variantId, quantity });
+      store.set(CART_KEY, this.items);
       this.changed(true);
-      if (!this.signedIn) {
-        this.saveLocal();
-        return;
-      }
-      return this.scheduleSync(variantId);
     },
     async add(variantId, quantity = 1) {
       const current = this.items.find((i) => i.variantId === variantId)?.quantity || 0;
@@ -248,95 +227,9 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       await this.setQty(variantId, 0);
     },
     async clear() {
-      this.cancelPending();
-      await this.queue;
-      if (this.signedIn) await api("DELETE", "/api/cart");
       this.items = [];
       store.set(CART_KEY, []);
       this.changed(true);
-    },
-
-    /* ---- server sync (signed-in only) ---- */
-    timers: new Map(), // variantId -> debounce timer
-    waiters: new Map(), // variantId -> [{resolve, reject}] waiting for that line to be saved
-    queue: Promise.resolve(), // serial chain of cart writes
-    pendingWrites: 0,
-    scheduleSync(variantId) {
-      clearTimeout(this.timers.get(variantId));
-      const done = new Promise((resolve, reject) => {
-        if (!this.waiters.has(variantId)) this.waiters.set(variantId, []);
-        this.waiters.get(variantId).push({ resolve, reject });
-      });
-      this.timers.set(
-        variantId,
-        setTimeout(() => this.enqueueSync(variantId), 250),
-      );
-      return done;
-    },
-    enqueueSync(variantId) {
-      this.timers.delete(variantId);
-      const waiters = this.waiters.get(variantId) || [];
-      this.waiters.delete(variantId);
-      this.pendingWrites++;
-      const run = async () => {
-        // Send whatever the quantity is *now*, so the last click always wins
-        const quantity = this.items.find((i) => i.variantId === variantId)?.quantity || 0;
-        try {
-          const data = await api("PUT", "/api/cart/items", { variantId, quantity });
-          this.pendingWrites--;
-          // Adopt the server's copy only when no other edit is waiting, so we never undo a newer click
-          if (!this.pendingWrites && !this.timers.size) {
-            this.items = data.items;
-            this.changed(false);
-          }
-          waiters.forEach((w) => w.resolve());
-        } catch (err) {
-          this.pendingWrites--;
-          try {
-            this.items = (await api("GET", "/api/cart")).items; // roll back to the truth
-          } catch {
-            /* keep local state; next action retries */
-          }
-          this.changed(false);
-          waiters.forEach((w) => w.reject(err));
-        }
-      };
-      this.queue = this.queue.then(run, run);
-      return this.queue;
-    },
-    /** Send any debounced edits now and wait until every cart write has finished (before checkout, logout…). */
-    async flush() {
-      for (const id of [...this.timers.keys()]) {
-        clearTimeout(this.timers.get(id));
-        this.enqueueSync(id);
-      }
-      await this.queue.catch(() => {});
-    },
-    cancelPending() {
-      for (const [id, t] of this.timers) {
-        clearTimeout(t);
-        (this.waiters.get(id) || []).forEach((w) => w.resolve());
-      }
-      this.timers.clear();
-      this.waiters.clear();
-    },
-    /** Page is being left with edits still debounced: send them with keepalive so they survive navigation. */
-    flushOnExit() {
-      if (!this.signedIn || !this.timers.size) return;
-      for (const [id, t] of this.timers) {
-        clearTimeout(t);
-        const quantity = this.items.find((i) => i.variantId === id)?.quantity || 0;
-        api("PUT", "/api/cart/items", { variantId: id, quantity }, { keepalive: true }).catch(() => {});
-      }
-      this.timers.clear();
-    },
-    /** After login/register: push the guest cart to MySQL and switch to the account cart. */
-    async mergeGuest() {
-      const guest = store.get(CART_KEY, []) || [];
-      if (guest.length) {
-        this.items = (await api("POST", "/api/cart/merge", { items: guest })).items;
-        store.set(CART_KEY, []);
-      }
     },
     setPref(k, v) {
       this.prefs[k] = v;
@@ -562,9 +455,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         if (e.target.value === "__other") $("#co-country-other", drawerEl)?.focus();
         return;
       }
-      const id = e.target.dataset && e.target.dataset.useAddress;
-      const a = id && (state.addresses || []).find((x) => String(x.id) === id);
-      if (a) fillAddress(a);
     });
     drawerEl.addEventListener("submit", onCheckoutSubmit);
   }
@@ -628,14 +518,13 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     if (!Cart.items.length) {
       body = `<div class="empty" style="margin-top:24px;border:0"><div class="empty-art">${I.bag}</div><h3>Your cart is empty</h3><p class="muted" style="margin:6px 0 16px">Add some cold-pressed goodness.</p><a class="btn btn-primary" href="/shop" data-close>Shop Oils</a></div>${upsellHtml()}`;
     } else if (drawerStep === "checkout") {
-      const u = state.user || {};
       const pickup = Cart.prefs.fulfillment === "pickup";
       const intl = isIntl();
       const country = Cart.prefs.country || "";
       body = `<form class="form" id="checkout-form" novalidate>
         <button type="button" class="link-btn" data-step="cart">← Back to cart</button>
         <div class="form-error hidden" id="checkout-error" role="alert"></div>
-        <div class="field"><label for="co-name">Full name</label><input class="input" id="co-name" name="name" autocomplete="name" required value="${esc(u.name || "")}"></div>
+        <div class="field"><label for="co-name">Full name</label><input class="input" id="co-name" name="name" autocomplete="name" required></div>
         ${
           intl
             ? `<div class="field"><label for="co-country">Country</label><select class="select input" id="co-country" name="country" autocomplete="country-name" required>
@@ -643,15 +532,15 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
                  <option value="__other" ${country && !COUNTRIES.includes(country) ? "selected" : ""}>Other country…</option></select></div>
                <div class="field ${country && !COUNTRIES.includes(country) ? "" : "hidden"}" id="co-country-other-wrap"><label for="co-country-other">Country name</label><input class="input" id="co-country-other" name="countryOther" maxlength="60" value="${esc(country && !COUNTRIES.includes(country) ? country : "")}"></div>
                <div class="field"><label for="co-phone">Phone / WhatsApp with country code</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required placeholder="+1 415 555 0100"></div>
-               <div class="field"><label for="co-email">Email</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" required value="${esc(u.email || "")}" placeholder="For your order confirmation"></div>`
-            : `<div class="field"><label for="co-phone">Mobile number (WhatsApp)</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required value="${esc(u.phone || "")}" placeholder="10-digit mobile"></div>
-               <div class="field"><label for="co-email">Email (optional)</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" value="${esc(u.email || "")}"></div>`
+               <div class="field"><label for="co-email">Email</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" required placeholder="For your order confirmation"></div>`
+            : `<div class="field"><label for="co-phone">Mobile number (WhatsApp)</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required placeholder="10-digit mobile"></div>
+               <div class="field"><label for="co-email">Email (optional)</label><input class="input" id="co-email" name="email" type="email" autocomplete="email"></div>`
         }
         ${
           pickup
             ? `<div class="bulk" style="margin:0"><div><b>Free store pickup</b><div class="muted" style="font-size:14px">${esc(s.storeAddress)}</div></div></div>`
-            : `${intl ? "" : addressPickerHtml()}<div class="field"><label for="co-address">${intl ? "Full shipping address" : "Delivery address"}</label><textarea class="input" id="co-address" name="address" autocomplete="street-address" required>${intl ? "" : esc(u.defaultAddress || "")}</textarea></div>
-               <div class="field"><label for="co-pin">${intl ? "Postal / ZIP code" : "Pincode"}</label><input class="input" id="co-pin" name="pincode" ${intl ? 'maxlength="12"' : 'inputmode="numeric" maxlength="6"'} autocomplete="postal-code" required value="${intl ? "" : esc(u.pincode || "")}"></div>`
+            : `<div class="field"><label for="co-address">${intl ? "Full shipping address" : "Delivery address"}</label><textarea class="input" id="co-address" name="address" autocomplete="street-address" required></textarea></div>
+               <div class="field"><label for="co-pin">${intl ? "Postal / ZIP code" : "Pincode"}</label><input class="input" id="co-pin" name="pincode" ${intl ? 'maxlength="12"' : 'inputmode="numeric" maxlength="6"'} autocomplete="postal-code" required></div>`
         }
         ${intl ? `<p class="intl-note">International shipping depends on weight and destination. We'll confirm the shipping charge with you on WhatsApp before dispatch.</p>` : ""}
         <div class="field"><label for="co-notes">Notes (optional)</label><input class="input" id="co-notes" name="notes" maxlength="300" placeholder="e.g. preferred delivery time"></div>
@@ -719,35 +608,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       .join("")}</div></div>`;
   }
 
-  function addressPickerHtml() {
-    const list = state.addresses || [];
-    if (!list.length) return "";
-    return `<div class="field"><span class="label">Saved addresses</span><div class="addr-pick">${list
-      .map(
-        (a) => `<label><input type="radio" name="savedAddress" ${a.isDefault ? "checked" : ""} data-use-address="${a.id}">
-          <span><b>${esc(a.label)}</b>${a.isDefault ? ' <span class="muted">(default)</span>' : ""}<br>${esc(a.address)} — ${esc(a.pincode)}</span></label>`,
-      )
-      .join("")}</div></div>`;
-  }
-
-  function fillAddress(a) {
-    const f = $("#checkout-form", drawerEl);
-    if (!f) return;
-    if (f.address) f.address.value = a.address;
-    if (f.pincode) f.pincode.value = a.pincode;
-    if (f.name && !f.name.value) f.name.value = a.name;
-    if (f.phone && !f.phone.value) f.phone.value = a.phone;
-  }
-
-  async function loadAddresses() {
-    if (!state.user || state.addresses) return;
-    try {
-      state.addresses = (await api("GET", "/api/account/addresses")).addresses;
-    } catch {
-      state.addresses = [];
-    }
-  }
-
   function totalsHtml(q) {
     if (!q) return `<div class="totals"><div><span>Calculating…</span></div></div>`;
     return `<div class="totals">
@@ -789,12 +649,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     if (t.hasAttribute("data-coupon-remove")) return Cart.setPref("couponCode", "");
     if (t.dataset.step) {
       drawerStep = t.dataset.step;
-      if (drawerStep === "checkout") await loadAddresses();
       renderDrawer();
-      if (drawerStep === "checkout") {
-        const def = (state.addresses || []).find((a) => a.isDefault);
-        if (def) fillAddress(def);
-      }
       $(".drawer-body", drawerEl).scrollTop = 0;
       return;
     }
@@ -877,7 +732,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const waWin = window.open("about:blank", "_blank");
     const quote = Cart.quote;
     try {
-      await Cart.flush(); // pending cart edits must land before the server clears the cart for this order
       const order = await api("POST", "/api/orders", {
         items: Cart.items,
         name: v.name,
@@ -1059,11 +913,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     renderHeader();
     renderFooter();
     Wishlist.load();
-    try {
-      await Cart.load();
-    } catch (err) {
-      toast(err.message, { error: true });
-    }
+    Cart.load();
     document.addEventListener("click", (e) => {
       if (e.target.closest("[data-open-cart]")) {
         e.preventDefault();
@@ -1071,8 +921,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       }
     });
     if (location.hash === "#cart") openDrawer();
-    // Leaving the page within the 250 ms debounce window: send pending cart edits anyway
-    window.addEventListener("pagehide", () => Cart.flushOnExit());
   }
 
   state.ready = boot();

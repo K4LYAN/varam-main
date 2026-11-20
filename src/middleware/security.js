@@ -55,9 +55,8 @@ const limiter = (windowMs, limit, extra = {}) => rateLimit({ windowMs, limit, st
 // Per IP; each account also locks itself after 5 wrong passwords (authService)
 const loginLimiter = limiter(15 * 60 * 1000, 20, { skipSuccessfulRequests: true });
 const passwordLimiter = limiter(15 * 60 * 1000, 10);
-const registerLimiter = limiter(60 * 60 * 1000, 10);
 const orderLimiter = limiter(10 * 60 * 1000, 20);
 const uploadLimiter = limiter(10 * 60 * 1000, 60);
 const apiLimiter = limiter(60 * 1000, 300);
 
-module.exports = { securityHeaders, sameOrigin, loginLimiter, passwordLimiter, registerLimiter, orderLimiter, uploadLimiter, apiLimiter };
+module.exports = { securityHeaders, sameOrigin, loginLimiter, passwordLimiter, orderLimiter, uploadLimiter, apiLimiter };

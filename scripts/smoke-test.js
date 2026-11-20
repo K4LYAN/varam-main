@@ -128,6 +128,12 @@ async function waitForServer(proc) {
     const cust = client();
     const admin = client();
     let catalog;
+    /** Customer accounts can only be created by an admin now (there is no public sign-up). */
+    const makeCustomer = async (who, password) => {
+      const r = await admin("POST", "/api/admin/users", { ...who, role: "customer", password });
+      assert.equal(r.status, 201, JSON.stringify(r.data));
+      return r.data.user;
+    };
     const vid = (slug) => catalog.products.find((p) => p.slug === slug).variants[0].id;
 
     console.log("Running tests…");
@@ -202,28 +208,22 @@ async function waitForServer(proc) {
       assert.ok(h.data.uptimeSeconds >= 0);
     });
 
-    await step("register → session cookie; duplicate email rejected", async () => {
-      const r = await cust("POST", "/api/auth/register", { name: "Test Customer", email: "cust@example.com", phone: "9876543210", password: "secret-pass-1" });
-      assert.equal(r.status, 201);
-      assert.equal(r.data.user.role, "customer");
-      assert.equal((await guest("POST", "/api/auth/register", { name: "Another Person", email: "cust@example.com", phone: "9876500000", password: "secret-pass-1" })).status, 409);
+    await step("no public sign-up, cart or account API; admin-created customer can sign in", async () => {
+      assert.equal((await guest("POST", "/api/auth/register", { name: "X Y", email: "x@example.com", phone: "9876500000", password: "secret-pass-1" })).status, 404);
+      assert.equal((await guest("GET", "/api/cart")).status, 404);
+      assert.equal((await guest("GET", "/api/account/orders")).status, 404);
+      assert.equal((await admin("POST", "/api/auth/login", { identifier: ADMIN.email, password: ADMIN.password, adminOnly: true })).status, 200);
+      await makeCustomer({ name: "Test Customer", email: "cust@example.com", phone: "9876543210" }, "secret-pass-1");
+      assert.equal((await cust("POST", "/api/auth/login", { identifier: "cust@example.com", password: "secret-pass-1" })).status, 200);
       assert.equal((await cust("GET", "/api/admin/stats")).status, 403);
-    });
-
-    await step("guest cart merges into account cart (quantities add up)", async () => {
-      await cust("PUT", "/api/cart/items", { variantId: vid("pure-ghee"), quantity: 1 });
-      const merged = (await cust("POST", "/api/cart/merge", { items: [{ variantId: vid("pure-ghee"), quantity: 2 }, { variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }] })).data;
-      const ghee = merged.items.find((i) => i.variantId === vid("pure-ghee"));
-      assert.equal(ghee.quantity, 3);
-      assert.equal(merged.items.length, 2);
     });
 
     let orderNumber;
     let invoiceUrl;
-    await step("place order (transaction): totals, coupon, stock decremented, cart cleared", async () => {
+    await step("place order (transaction): totals, coupon, stock decremented", async () => {
       const before = (await cust("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
       const r = await cust("POST", "/api/orders", {
-        items: (await cust("GET", "/api/cart")).data.items,
+        items: [{ variantId: vid("pure-ghee"), quantity: 3 }, { variantId: vid("wood-pressed-groundnut-oil"), quantity: 1 }],
         name: "Test Customer",
         phone: "9876543210",
         fulfillment: "delivery",
@@ -242,7 +242,6 @@ async function waitForServer(proc) {
       invoiceUrl = r.data.invoiceUrl;
       const after = (await cust("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-ghee").variants[0].stockQty;
       assert.equal(after, before - 3);
-      assert.equal((await cust("GET", "/api/cart")).data.items.length, 0);
     });
 
     await step("invoice: owner + signed link allowed, strangers get 404", async () => {
@@ -272,16 +271,6 @@ async function waitForServer(proc) {
       assert.equal(stock, 47);
     });
 
-    await step("account: order history + one-click reorder refills the cart", async () => {
-      const orders = (await cust("GET", "/api/account/orders")).data.orders;
-      assert.equal(orders.length, 1);
-      assert.equal(orders[0].items.length, 2);
-      const re = (await cust("POST", `/api/account/orders/${orderNumber}/reorder`)).data;
-      assert.equal(re.items.length, 2);
-      const p = (await cust("PUT", "/api/account/profile", { name: "Test Customer", phone: "9876543210", defaultAddress: "New address 520011", pincode: "520011" })).data;
-      assert.equal(p.user.defaultAddress, "New address 520011");
-    });
-
     await step("cash on delivery is not accepted", async () => {
       const r = await guest("POST", "/api/orders", {
         items: [{ variantId: vid("pure-honey"), quantity: 1 }], name: "No Cod", phone: "9123456789", fulfillment: "delivery",
@@ -300,46 +289,14 @@ async function waitForServer(proc) {
       assert.equal((await guest("GET", "/api/products/not-a-product")).status, 404);
     });
 
-    await step("address book: add (first = default), add second as default, edit, delete", async () => {
-      let r = await cust("POST", "/api/account/addresses", { label: "Home", name: "Test Customer", phone: "9876543210", address: "12-3-45, Lakshmi Nagar, Vijayawada", pincode: "520011" });
-      assert.equal(r.status, 201, JSON.stringify(r.data));
-      assert.equal(r.data.addresses[0].isDefault, true);
-      r = await cust("POST", "/api/account/addresses", { label: "Office", name: "Test Customer", phone: "9876543210", address: "MG Road, Benz Circle, Vijayawada", pincode: "520010", isDefault: true });
-      assert.equal(r.data.addresses.length, 2);
-      const office = r.data.addresses.find((a) => a.label === "Office");
-      assert.equal(office.isDefault, true);
-      assert.equal(r.data.addresses.filter((a) => a.isDefault).length, 1);
-      assert.equal((await cust("GET", "/api/auth/me")).data.user.pincode, "520010");
-      r = await cust("PUT", `/api/account/addresses/${office.id}`, { ...office, address: "MG Road, Benz Circle, Vijayawada (2nd floor)", isDefault: true });
-      assert.match(r.data.addresses.find((a) => a.id === office.id).address, /2nd floor/);
-      r = await cust("DELETE", `/api/account/addresses/${office.id}`);
-      assert.equal(r.data.addresses.length, 1);
-      assert.equal(r.data.addresses[0].isDefault, true);
-      assert.equal((await guest("GET", "/api/account/addresses")).status, 401);
-    });
-
-    await step("wishlist: add, list, remove", async () => {
-      const ghee = catalog.products.find((p) => p.slug === "pure-ghee").id;
-      let r = (await cust("POST", `/api/account/wishlist/${ghee}`)).data;
-      assert.deepEqual(r.productIds, [ghee]);
-      await cust("POST", `/api/account/wishlist/${ghee}`); // idempotent
-      assert.equal((await cust("GET", "/api/account/wishlist")).data.productIds.length, 1);
-      r = (await cust("DELETE", `/api/account/wishlist/${ghee}`)).data;
-      assert.equal(r.productIds.length, 0);
-    });
-
-    await step("customer cancels a pending order → stock returned; confirmed orders can't be cancelled", async () => {
+    await step("a cancelled pending order returns its stock", async () => {
       const stock = async () => (await guest("GET", "/api/catalog")).data.products.find((p) => p.slug === "pure-honey").variants[0].stockQty;
       const before = await stock();
       const o = await cust("POST", "/api/orders", { items: [{ variantId: vid("pure-honey"), quantity: 2 }], name: "Test Customer", phone: "9876543210", fulfillment: "pickup", paymentMethod: "UPI" });
       assert.equal(o.status, 201, JSON.stringify(o.data));
       assert.equal(await stock(), before - 2);
-      const c = await cust("POST", `/api/account/orders/${o.data.orderNumber}/cancel`);
-      assert.equal(c.status, 200, JSON.stringify(c.data));
+      assert.equal((await admin("PUT", `/api/admin/orders/${o.data.orderNumber}/status`, { status: "Cancelled" })).status, 200);
       assert.equal(await stock(), before);
-      assert.equal((await cust("POST", `/api/account/orders/${o.data.orderNumber}/cancel`)).status, 400);
-      assert.equal((await guest("POST", `/api/account/orders/${o.data.orderNumber}/cancel`)).status, 401);
-      // emptied the cart? (order placement clears the account cart) – restore cart state for later steps
     });
 
     await step("login: wrong password rejected, customer cannot use admin login", async () => {
@@ -500,14 +457,14 @@ async function waitForServer(proc) {
     await step("password change signs out other devices, keeps this one", async () => {
       const phone1 = client();
       const phone2 = client();
-      const reg = await phone1("POST", "/api/auth/register", { name: "Two Devices", email: "two@example.com", phone: "9000000002", password: "first-pass-1" });
-      assert.equal(reg.status, 201);
+      await makeCustomer({ name: "Two Devices", email: "two@example.com", phone: "9000000002" }, "first-pass-1");
+      assert.equal((await phone1("POST", "/api/auth/login", { identifier: "two@example.com", password: "first-pass-1" })).status, 200);
       assert.equal((await phone2("POST", "/api/auth/login", { identifier: "two@example.com", password: "first-pass-1" })).status, 200);
       const ch = await phone1("POST", "/api/auth/password", { currentPassword: "first-pass-1", newPassword: "second-pass-2" });
       assert.equal(ch.status, 200);
       assert.equal((await phone1("GET", "/api/auth/me")).data.user?.email, "two@example.com");
       assert.equal((await phone2("GET", "/api/auth/me")).data.user, null);
-      assert.equal((await phone2("GET", "/api/account/orders")).status, 401);
+      assert.equal((await phone2("POST", "/api/auth/password", { currentPassword: "second-pass-2", newPassword: "third-pass-3" })).status, 401);
     });
 
     await step("users: list + filters, create with generated password, must change it", async () => {
@@ -659,17 +616,8 @@ async function waitForServer(proc) {
       assert.equal((await guest("POST", "/api/orders", { ...base, country: "India", pincode: "520011", phone: "9876543210", paymentMethod: "INTL" })).status, 400);
     });
 
-    await step("sign-up security: password rules, confirm, terms, bot trap; /shop page", async () => {
-      const base = { name: "Lakshmi Devi", email: "lakshmi@example.com", phone: "9000000077" };
-      const reg = (extra) => client()("POST", "/api/auth/register", { ...base, ...extra });
-      assert.equal((await reg({ password: "onlyletters" })).status, 400, "needs a number");
-      assert.equal((await reg({ password: "password123" })).status, 400, "common password");
-      assert.equal((await reg({ password: "lakshmi-2026" })).status, 400, "contains own name");
-      assert.equal((await reg({ password: "mango-tree-7", confirmPassword: "mango-tree-8" })).status, 400, "confirm mismatch");
-      assert.equal((await reg({ password: "mango-tree-7", acceptTerms: false })).status, 400, "terms");
-      assert.equal((await reg({ password: "mango-tree-7", website: "http://spam.example" })).status, 400, "honeypot");
-      const ok = await reg({ password: "mango-tree-7", confirmPassword: "mango-tree-7", acceptTerms: true });
-      assert.equal(ok.status, 201, JSON.stringify(ok.data));
+    await step("/shop page: category title, ItemList and tiles", async () => {
+      await makeCustomer({ name: "Lakshmi Devi", email: "lakshmi@example.com", phone: "9000000077" }, "mango-tree-7");
       const shop = await guest("GET", "/shop?category=ghee");
       assert.equal(shop.status, 200);
       assert.match(shop.data, /<title>Pure Ghee – Buy Online \| Varam<\/title>/);

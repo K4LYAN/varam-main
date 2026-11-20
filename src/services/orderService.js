@@ -3,7 +3,6 @@
 const crypto = require("crypto");
 const { query, queryRaw, transaction } = require("../db/pool");
 const { quote } = require("./pricingService");
-const cartService = require("./cartService");
 const catalogService = require("./catalogService");
 const auditService = require("./auditService");
 const { invoiceUrl } = require("./invoiceService");
@@ -177,66 +176,10 @@ async function placeOrder({ user, input, settings }) {
       if (upd.affectedRows !== 1) throw conflict(`${l.name} (${l.sizeLabel}) just went out of stock. Please review your cart.`);
     }
 
-    if (user) {
-      await cartService.clear(user.id, conn);
-      if (input.address && !user.default_address && input.country === "India") {
-        await conn.execute("UPDATE users SET default_address = ?, pincode = ? WHERE id = ?", [input.address, input.pincode, user.id]);
-      }
-    }
     return { orderNumber, total: q.total, subtotal: q.subtotal, discount: q.discount, deliveryFee: q.deliveryFee, lines: q.lines };
   });
   catalogService.invalidate(); // stock changed
   return { ...result, invoiceUrl: invoiceUrl(result.orderNumber) };
-}
-
-/* ------------------------------------------------------------------ */
-/* Customer                                                            */
-/* ------------------------------------------------------------------ */
-
-async function listForUser(userId, limit = 100) {
-  const orders = await queryRaw(
-    `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ${Math.max(1, Math.min(200, Number(limit) || 100))}`,
-    [userId],
-  );
-  const items = await itemsByOrder(orders.map((o) => o.id));
-  return orders.map((o) => ({ ...shapeOrder(o, items.get(o.id) || []), canCancel: o.status === "Pending" }));
-}
-
-/** Customer cancels their own order while it is still Pending; stock and coupon use come back. */
-async function cancelByCustomer(userId, orderNumber) {
-  await transaction(async (conn) => {
-    const [o] = await query("SELECT id, status, coupon_code FROM orders WHERE order_number = ? AND user_id = ? FOR UPDATE", [orderNumber, userId], conn);
-    if (!o) throw notFound("Order not found");
-    if (o.status !== "Pending") {
-      throw badRequest(`This order is already ${o.status.toLowerCase()} and can no longer be cancelled online. Please message us on WhatsApp.`);
-    }
-    await restock(conn, o.id);
-    await releaseCoupon(conn, o.coupon_code);
-    await query("UPDATE orders SET status = 'Cancelled' WHERE id = ?", [o.id], conn);
-  });
-  catalogService.invalidate();
-}
-
-/** Put a past order's items back in the cart (current prices apply). */
-async function reorder(userId, orderNumber) {
-  const [order] = await query("SELECT id FROM orders WHERE order_number = ? AND user_id = ? LIMIT 1", [orderNumber, userId]);
-  if (!order) throw notFound("Order not found");
-  const items = await query(
-    `SELECT oi.variant_id, oi.quantity, oi.product_name, oi.size_label, pv.stock_qty, p.is_active
-     FROM order_items oi
-     LEFT JOIN product_variants pv ON pv.id = oi.variant_id
-     LEFT JOIN products p ON p.id = pv.product_id
-     WHERE oi.order_id = ?`,
-    [order.id],
-  );
-  const skipped = [];
-  const toAdd = [];
-  for (const it of items) {
-    if (!it.variant_id || !it.is_active || it.stock_qty === null || Number(it.stock_qty) <= 0) skipped.push(`${it.product_name} (${it.size_label})`);
-    else toAdd.push({ variantId: it.variant_id, quantity: it.quantity });
-  }
-  await cartService.addItems(userId, toAdd);
-  return { items: await cartService.getItems(userId), skipped };
 }
 
 /* ------------------------------------------------------------------ */
@@ -345,9 +288,6 @@ async function updateStatus(ctx, orderNumber, status) {
 module.exports = {
   generateOrderNumber,
   placeOrder,
-  listForUser,
-  cancelByCustomer,
-  reorder,
   adminList,
   adminExport,
   adminDetail,

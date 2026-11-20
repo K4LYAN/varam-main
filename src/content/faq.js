@@ -31,13 +31,8 @@ const FAQ = [
   {
     cat: "Ordering",
     q: "How do I place an order?",
-    a: "Add products to your cart, choose home delivery, store pickup or delivery outside India, and place the order online — or send the whole cart to us on WhatsApp in one tap. You get an order number and a printable invoice straight away.",
+    a: "Add products to your cart, choose home delivery, store pickup or delivery outside India, and send the order to us on WhatsApp in one tap. You get an order number straight away and we confirm everything in the chat.",
     featured: true,
-  },
-  {
-    cat: "Ordering",
-    q: "Do I need an account to order?",
-    a: "No, you can order as a guest. An account saves your addresses, keeps your cart across devices, shows your order history and lets you reorder in one click.",
   },
   {
     cat: "Ordering",

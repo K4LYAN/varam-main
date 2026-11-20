@@ -4,7 +4,7 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 
 - **Stack:** Node.js 18+ · Express 5 · MySQL (`mysql2/promise`, parameterised queries) · plain HTML/CSS/JavaScript (no build step)
 - **Hosting:** MilesWeb cPanel → *Setup Node.js App* (Phusion Passenger). Starts with `node server.js`.
-- **Storefront:** hero, category filter + search, pack-size switching with live price/MRP, stock badges, process switcher, comparison table, reviews, store map, FAQ, wishlist hearts. Motion effects (scroll reveals, parallax, tilt, magnetic buttons, counters, fly-to-cart) come from a tiny Web Animations library (`public/js/motion.js`) and respect *prefers-reduced-motion*.
+- **Storefront:** hero, category filter + search, pack-size switching with live price/MRP, stock badges, process switcher, comparison table, reviews, store map, FAQ, wishlist hearts (saved in the browser). Motion effects (scroll reveals, parallax, tilt, magnetic buttons, counters, fly-to-cart) come from a tiny Web Animations library (`public/js/motion.js`) and respect *prefers-reduced-motion*.
 - **Look & feel:** natural, traditional "gaanuga" theme (`public/css/theme.css`) — parchment paper, kumkum red, turmeric and curry-leaf green, Fraunces serif headings, Telugu accents and kolam motifs. The home page is short: hero, promises, shop, the ghani process, reviews, "order from anywhere" contact + store map, and an FAQ teaser.
 - **Shop page** (`/shop`): photo category tiles, filters (sidebar on desktop, bottom sheet on phones) for category, price and stock, search, sort, removable filter chips and shareable URLs. Product cards switch from **Add** to a − qty + stepper once the pack is in the cart and stay in sync with the cart drawer.
 - **Photos:** hero, process, category and sign-in photos are free-licence images from Unsplash (`src/content/photos.js`). Product cards show the product's own photo when uploaded in Admin → Products, otherwise a drawn bottle — upload real bottle photos there to replace them.
@@ -14,9 +14,8 @@ E-commerce store and admin panel for **Varam Organic Oil (గానుగ నూ
 - **India & worldwide orders:** customers in India get delivery or free pickup with UPI / pay at store; customers abroad choose **Outside India** in the cart, enter country, international phone, email and postal code, and receive the shipping charge + a secure payment link by email (orders store `country` and `customer_email`).
 - **Contact details** (editable in Admin → Coupons & settings): +91 77992 28444 (call/WhatsApp), +91 95157 18720, varam@varams.in (orders), info@varams.in (products & bulk), support@varams.in (order help).
 - **Product page** (`/product/:slug`): pack sizes (`?size=`), quantity, live price with savings, stock, Add to cart / Buy now, WhatsApp enquiry, description/details/delivery tabs, related products, JSON-LD for Google.
-- **Cart:** savings banner, "You may also like" upsells, remove with Undo, saved-address picker at checkout. Guests use `localStorage`; on login/register the guest cart is merged into MySQL (`/api/cart/merge`), so it follows the customer across devices.
-- **Checkout:** home delivery (free above the threshold, otherwise a delivery charge) or free store pickup · payment by **UPI** or **pay at the store** (pickup only) — cash on delivery is not offered · coupons (`VARAM10` = 10% off) · **Place order** (MySQL transaction creates the order, its items, and decrements stock) or **Order via WhatsApp** (`wa.me/917799228444`).
-- **Customer account** (`/account`): dashboard with member tier and stats, order tracker timeline, cancel pending orders (stock is restored), reorder, printable invoices (`/invoice/:orderNumber`), address book (up to 10, default address), wishlist, profile and password change with a strength meter.
+- **Cart:** savings banner, "You may also like" upsells, remove with Undo. The cart lives in the browser (`localStorage`); there are no customer accounts.
+- **Checkout:** home delivery (free above the threshold, otherwise a delivery charge) or free store pickup · coupons (`VARAM10` = 10% off) · **Send order on WhatsApp**: a MySQL transaction saves the order (items, stock decremented), then WhatsApp opens with the itemised order prefilled (`wa.me/917799228444`). Payment is arranged in the chat.
 - **Admin** (`/admin`): KPIs, 14-day sales chart, order-status pills, top products, low-stock quick restock, user management (customers + admins: roles, disable, password reset, sign-out everywhere), orders CSV export, products with inline per-pack-size price / MRP / SKU / stock editing, image upload, orders manager (filters, status updates, packing slip, WhatsApp update), coupons and store settings.
 
 ---
@@ -48,26 +47,24 @@ Strict layers: **routes** map URLs to **controllers** (HTTP only: parse input, c
 │   ├── services/                  # business logic + SQL
 │   │   ├── pricingService.js      # single source of truth for prices, coupons, delivery fee, totals
 │   │   ├── orderService.js        # checkout transaction, random order numbers, cancel/restock, admin orders
-│   │   ├── cartService.js         # account cart, atomic guest-cart merge
 │   │   ├── catalogService.js      # storefront catalogue (short in-process cache)
 │   │   ├── productAdminService.js # products, pack sizes, prices, stock (audited)
 │   │   ├── couponService.js       # coupon preview + admin CRUD (usage limits, expiry; audited)
 │   │   ├── settingsService.js     # store settings (cached; audited updates)
-│   │   ├── accountService.js      # profile, address book, wishlist
-│   │   ├── authService.js         # register, login, password change
+│   │   ├── authService.js         # login, password change (admin and admin-created users)
 │   │   ├── adminService.js        # dashboard figures, customers
 │   │   ├── userAdminService.js    # user management (roles, disable, password reset, delete)
 │   │   ├── auditService.js        # admin_audit_logs
 │   │   ├── invoiceService.js      # HMAC-signed invoice links
 │   │   ├── uploadService.js       # image magic-byte check + save
 │   │   └── healthService.js       # /api/health
-│   ├── controllers/               # one per area: auth, catalog, cart, checkout, account, admin, page, health
-│   ├── routes/                    # api.js (mounts all API routers) + auth, catalog, cart, checkout, account, admin, pages
+│   ├── controllers/               # one per area: auth, catalog, checkout, admin, user admin, page, health
+│   ├── routes/                    # api.js (mounts all API routers) + auth, catalog, checkout, admin, pages
 │   └── utils/                     # httpError, validate, csv (formula-safe), invoiceTemplate
-├── views/                         # HTML pages (index, product, login, register, account, 404, admin/*)
+├── views/                         # HTML pages (index, shop, product, faq, 404, admin/*)
 ├── public/
 │   ├── css/                       # style.css, effects.css, admin.css, invoice.css
-│   ├── js/                        # common.js (header/cart/checkout), motion.js, home.js, product.js, account.js, admin.js, …
+│   ├── js/                        # common.js (header/cart/checkout), motion.js, home.js, product.js, admin.js, …
 │   ├── img/varam-logo.jpg
 │   └── uploads/                   # admin-uploaded product images
 ├── docs/ARCHITECTURE-AUDIT.md     # audit findings and what changed

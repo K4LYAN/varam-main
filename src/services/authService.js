@@ -49,20 +49,6 @@ async function findById(id) {
   return u || null;
 }
 
-async function register({ name, email, phone, password }) {
-  const existing = await query("SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1", [email, phone]);
-  if (existing.length) throw conflict("An account with this email or phone already exists. Please sign in.");
-  const hash = await bcrypt.hash(password, config.bcryptRounds);
-  let result;
-  try {
-    result = await query("INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'customer')", [name, email, phone, hash]);
-  } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") throw conflict("An account with this email or phone already exists. Please sign in.");
-    throw err;
-  }
-  return findById(result.insertId);
-}
-
 /** Verify credentials by email or 10-digit phone. Constant-ish time whether or not the account exists. */
 async function login({ identifier, password, adminOnly }) {
   const digits = identifier.replace(/\D/g, "");
@@ -107,4 +93,4 @@ async function changePassword(userId, current, next) {
   return findById(userId);
 }
 
-module.exports = { MAX_FAILED, LOCK_MINUTES, publicUser, findSessionUser, findById, register, login, changePassword };
+module.exports = { MAX_FAILED, LOCK_MINUTES, publicUser, findSessionUser, findById, login, changePassword };

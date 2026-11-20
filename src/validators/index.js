@@ -46,18 +46,6 @@ function notABot(b) {
   if (b && typeof b.website === "string" && b.website.trim() !== "") throw new v.ValidationError("Please try again", "form");
 }
 
-function register(b) {
-  notABot(b);
-  const name = v.str(b.name, "Name", { required: true, min: 2, max: 120 });
-  const email = v.email(b.email);
-  const phone = v.phone(b.phone);
-  if (b.confirmPassword !== undefined && String(b.confirmPassword) !== String(b.password || "")) {
-    throw new v.ValidationError("The two passwords don't match", "confirmPassword");
-  }
-  if (b.acceptTerms !== undefined && !v.bool(b.acceptTerms)) throw new v.ValidationError("Please accept the terms to continue", "acceptTerms");
-  return { name, email, phone, password: password(b.password, "password", "Password", { name, email, phone }) };
-}
-
 function login(b) {
   notABot(b);
   const identifier = v.clean(b.identifier ?? b.email, 190).toLowerCase();
@@ -69,27 +57,6 @@ function login(b) {
 const passwordChange = (b, user = {}) => ({
   current: String(b.currentPassword || "").slice(0, 200),
   next: password(b.newPassword, "newPassword", "New password", user),
-});
-
-const profile = (b) => ({
-  name: v.str(b.name, "Name", { required: true, min: 2, max: 120 }),
-  phone: v.phone(b.phone),
-  defaultAddress: v.str(b.defaultAddress, "Address", { max: 500 }) || null,
-  pincode: v.pincode(b.pincode, "Pincode", false) || null,
-});
-
-const address = (b) => ({
-  label: v.str(b.label || "Home", "Label", { max: 40 }) || "Home",
-  name: v.str(b.name, "Recipient name", { required: true, min: 2, max: 120 }),
-  phone: v.phone(b.phone),
-  address: v.str(b.address, "Address", { required: true, min: 8, max: 500 }),
-  pincode: v.pincode(b.pincode),
-  isDefault: v.bool(b.isDefault),
-});
-
-const cartQuantity = (b) => ({
-  variantId: v.id(b.variantId, "variantId"),
-  quantity: v.int(b.quantity, "quantity", { min: 0, max: MAX_QTY }),
 });
 
 const fulfillment = (value) => (value === "pickup" ? "pickup" : "delivery");
@@ -283,13 +250,9 @@ const userListQuery = (q) => ({
 });
 
 module.exports = {
-  register,
   login,
   passwordChange,
   password,
-  profile,
-  address,
-  cartQuantity,
   fulfillment,
   country,
   isInternational,

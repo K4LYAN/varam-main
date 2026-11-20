@@ -1908,7 +1908,7 @@ textarea.input {
   }
 }
 
-/* ---------- Auth & account ---------- */
+/* ---------- Auth card (admin sign in, 404) ---------- */
 .auth-wrap {
   min-height: calc(100vh - 110px);
   display: grid;
@@ -1940,17 +1940,6 @@ textarea.input {
 .auth-card .alt a {
   color: var(--crimson);
   font-weight: 700;
-}
-.account-grid {
-  display: grid;
-  gap: 24px;
-  padding: 40px 0 72px;
-}
-@media (min-width: 960px) {
-  .account-grid {
-    grid-template-columns: 1.6fr 1fr;
-    align-items: start;
-  }
 }
 .panel {
   background: #fff;

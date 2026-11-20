@@ -195,7 +195,7 @@ async function packingSlip(req, res) {
 function robots(_req, res) {
   res
     .type("text/plain")
-    .send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /account\nDisallow: /invoice/\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
+    .send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /invoice/\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
 }
 
 async function sitemap(_req, res) {

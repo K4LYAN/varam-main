@@ -17,9 +17,7 @@ api.use(verifyCsrfToken); // CSRF layer 2: double-submit token on every state-ch
 
 api.use("/auth", require("./auth"));
 api.use("/", require("./catalog"));
-api.use("/cart", require("./cart"));
 api.use("/", require("./checkout"));
-api.use("/account", require("./account"));
 api.use("/admin", require("./admin"));
 api.use(notFound);
 
