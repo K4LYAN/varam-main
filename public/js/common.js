@@ -646,7 +646,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
                  <option value="__other" ${country && !COUNTRIES.includes(country) ? "selected" : ""}>Other country…</option></select></div>
                <div class="field ${country && !COUNTRIES.includes(country) ? "" : "hidden"}" id="co-country-other-wrap"><label for="co-country-other">Country name</label><input class="input" id="co-country-other" name="countryOther" maxlength="60" value="${esc(country && !COUNTRIES.includes(country) ? country : "")}"></div>
                <div class="field"><label for="co-phone">Phone / WhatsApp with country code</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required placeholder="+1 415 555 0100"></div>
-               <div class="field"><label for="co-email">Email</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" required value="${esc(u.email || "")}" placeholder="We send the shipping quote & payment link here"></div>`
+               <div class="field"><label for="co-email">Email</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" required value="${esc(u.email || "")}" placeholder="For your order confirmation"></div>`
             : `<div class="field"><label for="co-phone">Mobile number (WhatsApp)</label><input class="input" id="co-phone" name="phone" inputmode="tel" autocomplete="tel" required value="${esc(u.phone || "")}" placeholder="10-digit mobile"></div>
                <div class="field"><label for="co-email">Email (optional)</label><input class="input" id="co-email" name="email" type="email" autocomplete="email" value="${esc(u.email || "")}"></div>`
         }
@@ -656,20 +656,11 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
             : `${intl ? "" : addressPickerHtml()}<div class="field"><label for="co-address">${intl ? "Full shipping address" : "Delivery address"}</label><textarea class="input" id="co-address" name="address" autocomplete="street-address" required>${intl ? "" : esc(u.defaultAddress || "")}</textarea></div>
                <div class="field"><label for="co-pin">${intl ? "Postal / ZIP code" : "Pincode"}</label><input class="input" id="co-pin" name="pincode" ${intl ? 'maxlength="12"' : 'inputmode="numeric" maxlength="6"'} autocomplete="postal-code" required value="${intl ? "" : esc(u.pincode || "")}"></div>`
         }
-        <div class="field"><span class="label">Payment</span><div class="radio-row">
-          ${
-            intl
-              ? `<label><input type="radio" name="paymentMethod" value="INTL" checked> <span>Secure payment link by email</span></label>`
-              : `<label><input type="radio" name="paymentMethod" value="UPI" checked> <span>UPI</span></label>
-                 ${pickup ? `<label><input type="radio" name="paymentMethod" value="STORE"> <span>Pay at store</span></label>` : ""}`
-          }
-        </div></div>
-        ${intl ? `<p class="intl-note">International shipping depends on weight and destination. After you place the order we email the shipping charge and a secure payment link — nothing is charged until you confirm.</p>` : ""}
+        ${intl ? `<p class="intl-note">International shipping depends on weight and destination. We'll confirm the shipping charge with you on WhatsApp before dispatch.</p>` : ""}
         <div class="field"><label for="co-notes">Notes (optional)</label><input class="input" id="co-notes" name="notes" maxlength="300" placeholder="e.g. preferred delivery time"></div>
       </form>`;
       foot = totalsHtml(q) + `<div class="drawer-actions">
-        <button class="btn btn-primary btn-block" type="submit" form="checkout-form" ${!q || q.hasProblems ? "disabled" : ""}>Place order · ${q ? inr(q.total) : ""}</button>
-        <button class="btn btn-wa btn-block" type="button" data-wa-order>${I.wa} Order via WhatsApp</button>
+        <button class="btn btn-wa btn-block" type="submit" form="checkout-form" ${!q || q.hasProblems ? "disabled" : ""}>${I.wa} Send order on WhatsApp · ${q ? inr(q.total) : ""}</button>
       </div>`;
     } else {
       const lines = q ? q.lines : Cart.items;
@@ -702,8 +693,8 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         }
         ${totalsHtml(q)}
         <div class="drawer-actions">
-          <button class="btn btn-primary btn-block" type="button" data-step="checkout" ${!q || q.hasProblems || !q.subtotal ? "disabled" : ""}>Checkout</button>
-          <button class="btn btn-wa btn-block" type="button" data-wa-order ${!q || !q.subtotal ? "disabled" : ""}>${I.wa} Order via WhatsApp</button>
+          <button class="btn btn-wa btn-block" type="button" data-step="checkout" ${!q || q.hasProblems || !q.subtotal ? "disabled" : ""}>${I.wa} Order on WhatsApp</button>
+          <p class="wa-hint">Add your details, then send the order to us on WhatsApp. We confirm stock, delivery and payment there.</p>
           ${q && q.hasProblems ? `<p class="coupon-msg err" style="text-align:center">Remove unavailable items to continue.</p>` : ""}
         </div>`;
     }
@@ -765,7 +756,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     return `<div class="totals">
       <div><span>Subtotal (${q.itemCount} item${q.itemCount === 1 ? "" : "s"})</span><span>${inr(q.subtotal)}</span></div>
       ${q.discount > 0 ? `<div class="disc"><span>Discount (${esc(q.couponCode)})</span><span>− ${inr(q.discount)}</span></div>` : ""}
-      <div><span>${isIntl() ? "International shipping" : Cart.prefs.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${isIntl() ? "Quoted by email" : q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}</span></div>
+      <div><span>${isIntl() ? "International shipping" : Cart.prefs.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${isIntl() ? "Confirmed on WhatsApp" : q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}</span></div>
       <div class="grand"><span>${isIntl() ? "Total (before shipping)" : "Total"}</span><span>${inr(q.total)}</span></div></div>`;
   }
 
@@ -810,7 +801,6 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       $(".drawer-body", drawerEl).scrollTop = 0;
       return;
     }
-    if (t.hasAttribute("data-wa-order")) return orderViaWhatsApp();
   }
 
   async function guard(fn) {
@@ -866,7 +856,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       if (!country) problems.push("Choose your country");
       const d = phone.replace(/\D/g, "");
       if (d.length < 8 || d.length > 15) problems.push("Enter your phone number with the country code");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problems.push("Enter your email — we send the payment link there");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problems.push("Enter your email");
       if (!v.address || v.address.trim().length < 8) problems.push("Enter your full shipping address");
       if (!/^[A-Za-z0-9][A-Za-z0-9 -]{1,11}$/.test(String(v.pincode || "").trim())) problems.push("Enter your postal / ZIP code");
     } else {
@@ -883,8 +873,12 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       return;
     }
     const btn = $('button[type="submit"]', drawerEl);
+    const btnHtml = btn.innerHTML;
     btn.disabled = true;
-    btn.textContent = "Placing order…";
+    btn.textContent = "Opening WhatsApp…";
+    // Open the tab now, while we still have the click; popup blockers stop window.open after an await
+    const waWin = window.open("about:blank", "_blank");
+    const quote = Cart.quote;
     try {
       await Cart.flush(); // pending cart edits must land before the server clears the cart for this order
       const order = await api("POST", "/api/orders", {
@@ -896,7 +890,8 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         fulfillment: intl ? "delivery" : Cart.prefs.fulfillment,
         address: v.address,
         pincode: v.pincode,
-        paymentMethod: v.paymentMethod,
+        // Payment is arranged on WhatsApp; the order record still needs a method
+        paymentMethod: intl ? "INTL" : Cart.prefs.fulfillment === "pickup" ? "STORE" : "UPI",
         notes: v.notes,
         couponCode: Cart.prefs.couponCode,
       });
@@ -910,34 +905,32 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         Cart.prefs.country = country;
         store.set(PREF_KEY, Cart.prefs);
       }
-      showReceipt(order, v.name, email);
+      const waUrl = whatsAppUrl(buildOrderMessage(quote, v, order));
+      if (waWin && !waWin.closed) {
+        waWin.opener = null;
+        waWin.location.href = waUrl;
+      } else location.href = waUrl;
+      showReceipt(order, v.name, waUrl);
       state.catalog = null; // stock changed
       window.dispatchEvent(new Event("varam:catalog-stale"));
     } catch (err) {
       errBox.textContent = err.message + (err.data?.details ? " — " + err.data.details.map((d) => `${d.name}: ${d.reason}`).join(", ") : "");
       errBox.classList.remove("hidden");
+      if (waWin && !waWin.closed) waWin.close();
       btn.disabled = false;
-      btn.textContent = "Place order";
+      btn.innerHTML = btnHtml;
       Cart.refreshQuote();
     }
   }
 
-  function showReceipt(order, name, email) {
+  function showReceipt(order, name, waUrl) {
     const s = state.settings || {};
     const wrap = document.createElement("div");
     wrap.className = "modal";
     wrap.setAttribute("role", "dialog");
     wrap.setAttribute("aria-modal", "true");
     wrap.setAttribute("aria-label", "Order placed");
-    const pay =
-      order.paymentMethod === "INTL"
-        ? `We'll email the international shipping charge and a secure payment link to <b>${esc(email || "your email")}</b> — usually within one working day.`
-        : order.paymentMethod === "UPI"
-        ? order.upiId
-          ? `Pay <b>${inr(order.total)}</b> by UPI to <b>${esc(order.upiId)}</b> and share the screenshot on WhatsApp.`
-          : "We'll share UPI payment details on WhatsApp when we confirm your order."
-        : "Pay at the store when you collect your order.";
-    const waText = `Hello Varam! I just placed order ${order.orderNumber} (${inr(order.total)}). Name: ${name}.`;
+    const pay = "Your order has been sent to us on WhatsApp. We'll confirm stock, delivery and payment there. If WhatsApp didn't open, tap the button below.";
     wrap.innerHTML = `<div class="backdrop show" data-x></div><div class="modal-card">
       <div class="tick">${I.check}</div>
       <h2>Thank you, ${esc(String(name).split(" ")[0])}!</h2>
@@ -946,13 +939,13 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       <div class="receipt">
         ${order.lines.map((l) => `<div><span>${esc(l.name)} · ${esc(l.sizeLabel)} × ${l.quantity}</span><span>${inr(l.lineTotal)}</span></div>`).join("")}
         ${order.discount > 0 ? `<div><span>Discount</span><span>− ${inr(order.discount)}</span></div>` : ""}
-        <div><span>${order.international ? `Shipping to ${esc(order.country)}` : order.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${order.international ? "Quoted by email" : order.deliveryFee > 0 ? inr(order.deliveryFee) : "Free"}</span></div>
+        <div><span>${order.international ? `Shipping to ${esc(order.country)}` : order.fulfillment === "pickup" ? "Store pickup" : "Delivery"}</span><span>${order.international ? "Confirmed on WhatsApp" : order.deliveryFee > 0 ? inr(order.deliveryFee) : "Free"}</span></div>
         <div style="font-weight:800"><span>Total</span><span>${inr(order.total)}</span></div>
       </div>
       <p style="margin-top:14px;font-size:14px">${pay}</p>
       <div class="actions">
         <a class="btn btn-primary" href="${esc(order.invoiceUrl)}" target="_blank" rel="noopener">View &amp; print invoice</a>
-        <a class="btn btn-wa" href="https://wa.me/${esc(s.whatsappNumber)}?text=${encodeURIComponent(waText)}" target="_blank" rel="noopener">${I.wa} Message us on WhatsApp</a>
+        <a class="btn btn-wa" href="${esc(waUrl)}" target="_blank" rel="noopener">${I.wa} Open WhatsApp again</a>
         <button class="btn btn-outline" type="button" data-x>Continue shopping</button>
       </div></div>`;
     document.body.appendChild(wrap);
@@ -966,43 +959,40 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     $(".btn", wrap).focus();
   }
 
-  /** Build an itemised WhatsApp message from the live quote and open Click-to-Chat. */
-  function orderViaWhatsApp() {
-    const q = Cart.quote;
-    const s = state.settings || {};
-    if (!q || !q.subtotal) return;
-    const v = formValues();
-    const u = state.user || {};
-    const name = (v.name || u.name || "").trim();
-    const phone = (v.phone || u.phone || "").trim();
-    const address = (v.address || u.defaultAddress || "").trim();
-    const pin = (v.pincode || u.pincode || "").trim();
-    const lines = q.lines.filter((l) => l.available && l.stock >= l.quantity);
-    const msg = [
+  function whatsAppUrl(text) {
+    return `https://wa.me/${(state.settings || {}).whatsappNumber}?text=${encodeURIComponent(text)}`;
+  }
+
+  /** Itemised order message for WhatsApp, built from the saved order (falls back to the live quote). */
+  function buildOrderMessage(q, v, order) {
+    const lines = order?.lines || (q ? q.lines.filter((l) => l.available) : []);
+    const intl = order ? order.international : isIntl();
+    const pickup = order ? order.fulfillment === "pickup" : Cart.prefs.fulfillment === "pickup";
+    const country = order?.country || (v.country === "__other" ? v.countryOther : v.country) || "";
+    const discount = order ? order.discount : q?.discount || 0;
+    const fee = order ? order.deliveryFee : q?.deliveryFee || 0;
+    const total = order ? order.total : q?.total || 0;
+    const subtotal = lines.reduce((sum, l) => sum + Number(l.lineTotal || 0), 0);
+    return [
       "Hello Varam! 🙏 I would like to place an order.",
+      ...(order ? [`Order no: *${order.orderNumber}*`] : []),
       "",
       "*ORDER DETAILS*",
       ...lines.map((l, i) => `${i + 1}. *${l.name}* — ${l.sizeLabel} × ${l.quantity} = ${inr(l.lineTotal)}`),
       "",
-      `Subtotal: ${inr(q.subtotal)}`,
-      ...(q.discount > 0 ? [`Discount (${q.couponCode}): −${inr(q.discount)}`] : []),
-      isIntl()
-        ? `International shipping${v.country && v.country !== "__other" ? " to " + v.country : v.countryOther ? " to " + v.countryOther : ""}: please quote`
-        : `${Cart.prefs.fulfillment === "pickup" ? "Store pickup (BRTS Rd, Vijayawada)" : "Home delivery"}: ${q.deliveryFee > 0 ? inr(q.deliveryFee) : "Free"}`,
-      `*Total: ${inr(q.total)}*`,
+      `Subtotal: ${inr(subtotal)}`,
+      ...(discount > 0 ? [`Discount: −${inr(discount)}`] : []),
+      intl ? `Shipping to ${country}: please quote` : `${pickup ? "Store pickup (BRTS Rd, Vijayawada)" : "Home delivery"}: ${fee > 0 ? inr(fee) : "Free"}`,
+      `*Total: ${inr(total)}*`,
       "",
-      ...(name ? [`Name: ${name}`] : []),
-      ...(phone ? [`Phone: ${phone}`] : []),
-      ...(v.email ? [`Email: ${v.email}`] : []),
-      ...(Cart.prefs.fulfillment !== "pickup" && address ? [`Address: ${address}${pin ? " - " + pin : ""}`] : []),
+      `Name: ${String(v.name || "").trim()}`,
+      `Phone: ${String(v.phone || "").trim()}`,
+      ...(v.email ? [`Email: ${String(v.email).trim()}`] : []),
+      ...(!pickup && v.address ? [`Address: ${String(v.address).trim()}${v.pincode ? " - " + String(v.pincode).trim() : ""}`] : []),
+      ...(v.notes ? [`Note: ${String(v.notes).trim()}`] : []),
       "",
       "Please confirm availability and payment details. Thank you!",
     ].join("\n");
-    const url = `https://wa.me/${s.whatsappNumber}?text=${encodeURIComponent(msg)}`;
-    const win = window.open(url, "_blank");
-    if (win) win.opener = null;
-    else location.href = url;
-    toast("Opening WhatsApp with your order…");
   }
 
   /* ---------------- Wishlist ---------------- */

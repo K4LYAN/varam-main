@@ -84,7 +84,7 @@
           <div class="tab-panel hidden" role="tabpanel" id="tp-2" aria-labelledby="tb-2">
             <p><b>Home delivery:</b> ${s.freeDeliveryThreshold ? `free on orders above ${inr(s.freeDeliveryThreshold)}, otherwise ${inr(s.deliveryFee)}.` : "available across Vijayawada."}</p>
             <p style="margin-top:8px"><b>Store pickup:</b> always free — ${esc(s.storeAddress || "")}. ${esc(s.storeHours || "")}</p>
-            <p style="margin-top:8px"><b>Payment:</b> UPI (details shared when we confirm your order), or pay at the store for pickups.</p>
+            <p style="margin-top:8px"><b>How to order:</b> add to cart and send your order on WhatsApp. We confirm stock, delivery and payment there.</p>
           </div>
         </div>
       </div>`;

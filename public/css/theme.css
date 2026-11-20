@@ -2035,3 +2035,5 @@ html, body { overflow-x: clip; }
 .reach { grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 960px) { .reach { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (max-width: 420px) { .reach-card { padding: 18px; } }
+
+.wa-hint { margin: 8px 0 0; font-size: 13px; color: var(--muted); text-align: center; }

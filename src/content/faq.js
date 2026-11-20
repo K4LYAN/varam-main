@@ -41,8 +41,8 @@ const FAQ = [
   },
   {
     cat: "Ordering",
-    q: "How do I pay?",
-    a: "In India you pay by UPI — we share the payment details on WhatsApp when we confirm your order — or at the store when you collect a pickup order. For orders from outside India we email you a secure payment link. Cash on delivery is not available.",
+    q: "How do I order and pay?",
+    a: "Add products to your cart, enter your details and tap “Send order on WhatsApp”. Your order opens in WhatsApp with everything filled in, so you just press send. We confirm stock, delivery and payment with you there. No payment is taken on the website.",
   },
   {
     cat: "Ordering",
@@ -58,7 +58,7 @@ const FAQ = [
   {
     cat: "Delivery",
     q: "Do you ship outside India?",
-    a: "Yes — we accept orders from other countries too. Choose “Outside India” in your cart and enter your country and address. International shipping depends on weight and destination, so we email you the shipping charge and a secure payment link before we dispatch. Questions? Write to {email}.",
+    a: "Yes — we accept orders from other countries too. Choose “Outside India” in your cart and enter your country and address. International shipping depends on weight and destination, so we confirm the shipping charge with you on WhatsApp before we dispatch. Questions? Write to {email}.",
     featured: true,
   },
   {

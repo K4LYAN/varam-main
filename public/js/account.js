@@ -126,7 +126,7 @@
       .map((i) => `<span title="${esc(i.productName)}">${window.Varam.bottleSvg(i.productName, colourFor(i.productName))}</span>`)
       .join("");
     return `<article class="order-card" data-order="${esc(o.orderNumber)}">
-      <div class="top"><div><b>${esc(o.orderNumber)}</b><div class="muted" style="font-size:13px">${fmtDate(o.createdAt)} · ${o.fulfillmentType === "pickup" ? "Store pickup" : o.international ? `Shipping to ${esc(o.country)}` : "Home delivery"} · ${esc({ STORE: "Pay at store", INTL: "Payment link by email" }[o.paymentMethod] || o.paymentMethod)}</div></div>
+      <div class="top"><div><b>${esc(o.orderNumber)}</b><div class="muted" style="font-size:13px">${fmtDate(o.createdAt)} · ${o.fulfillmentType === "pickup" ? "Store pickup" : o.international ? `Shipping to ${esc(o.country)}` : "Home delivery"} · Ordered on WhatsApp</div></div>
         <span class="status ${statusClass(o.status)}">${esc(o.status)}</span></div>
       ${tracker(o)}
       <div class="thumbs">${thumbs}</div>
