@@ -1,4 +1,4 @@
-/* Varam static site — shared header, footer, cart and WhatsApp checkout. Prices and products live in js/data.js. */
+/* Varam — shared header, footer, cart and WhatsApp checkout. Products and prices come from js/data.js, which the Node app builds from src/data/store.json. */
 /* =====================================================================
    Varam — shared storefront script (header, cart, checkout, helpers)
    ===================================================================== */
@@ -82,7 +82,7 @@
     };
   }
 
-  /** Answers the requests the storefront scripts make — from js/data.js, never a server. */
+  /** Answers the requests the storefront scripts make — in the browser, from js/data.js. */
   async function api(method, url, body) {
     const u = new URL(url, "http://local");
     const p = u.pathname;

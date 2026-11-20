@@ -2,10 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "varam",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "4200", "--bind", "127.0.0.1"],
-      "port": 4200,
+      "name": "varam-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "env": { "PORT": "4210" },
+      "port": 4210,
       "autoPort": false
     }
   ]

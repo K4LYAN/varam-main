@@ -1,7 +1,4 @@
-/* Varam static site — products, prices, contact details and coupons.
-   Edit prices, stock, contact details or coupons here; the pages read this file. */
-window.VARAM_DATA = {
-  "generatedAt": "2026-11-20T09:59:58.178Z",
+{
   "catalog": {
     "products": [
       {
@@ -334,4 +331,4 @@ window.VARAM_DATA = {
       "expiresAt": null
     }
   ]
-};
+}

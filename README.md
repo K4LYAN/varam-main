@@ -1,6 +1,6 @@
-# Varam Organic Oil — static website
+# Varam Organic Oil — Node.js website
 
-Plain HTML, CSS and JavaScript. No server, no database, no build step: upload the files to any static host.
+A Node.js + Express app that serves the Varam store. There is no database: products, prices and settings live in one JSON file, and orders are sent to us on WhatsApp.
 
 ## How ordering works
 
@@ -10,31 +10,43 @@ Customers add products to the cart (kept in their browser), enter their details 
 
 | Path | What it is |
 | --- | --- |
-| `index.html`, `shop.html`, `faq.html`, `404.html` | Pages |
-| `products/*.html` | One page per product |
-| `js/data.js` | **Products, pack sizes, prices, stock, delivery fee, contact details, WhatsApp number and coupons** |
-| `js/common.js` | Header, footer, cart and WhatsApp checkout |
-| `js/home.js`, `shop.js`, `product.js`, `faq.js`, `catalog.js`, `motion.js` | Page scripts |
-| `css/` | Styles |
-| `img/` | Logo |
-| `sitemap.xml`, `robots.txt` | For search engines |
-| `server.js`, `package.json` | Optional file server for hosts that run `npm start` |
+| `server.js` | Starts the app (`npm start`) |
+| `src/app.js` | Express app: security headers, compression, routes, static files, 404 page |
+| `src/routes/pages.js` | Clean URLs (`/shop`, `/faq`, `/product/<slug>`), `js/data.js`, redirects for old pages |
+| `src/routes/api.js` | Read-only JSON API |
+| `src/store.js` | Reads `src/data/store.json` |
+| `src/data/store.json` | **Products, pack sizes, prices, stock, delivery fee, contact details, WhatsApp number and coupons** |
+| `public/` | Pages, product pages, CSS, browser scripts, logo, `sitemap.xml`, `robots.txt` |
+| `scripts/ensure-deps.js` | Installs packages before `npm start` if they are missing |
 
 ## Changing prices or products
 
-Edit `js/data.js`: change `price`, `mrp` or `stockQty` on a pack size (`stockQty: 0` shows "Out of stock"). Cart totals and product cards use these values.
-The page title and Google preview text on each `products/*.html` page also mention the starting price, so update that text too when a price changes.
+Edit `src/data/store.json`: change `price`, `mrp` or `stockQty` on a pack size (`stockQty: 0` shows "Out of stock"). The app picks up the change on the next page load; no restart needed.
+The page title and Google preview text on each `public/products/*.html` page also mention the starting price, so update that text too when a price changes.
+
+## API
+
+| Request | Returns |
+| --- | --- |
+| `GET /api/health` | `{ "ok": true }` |
+| `GET /api/catalog` | Categories, products and settings |
+| `GET /api/products` | All products |
+| `GET /api/products/<slug>` | One product (404 if unknown) |
+| `GET /api/settings` | Contact details, delivery fee, WhatsApp number |
 
 ## Run it locally
 
 ```bash
-python -m http.server 4200
+npm install
 ```
 
-Then open http://localhost:4200.
+```bash
+npm start
+```
+
+Then open http://localhost:3000. Use `npm run dev` to restart automatically when you edit the code. Set `PORT` to use another port.
 
 ## Deploy
 
-- **MilesWeb (mPanel) Node app:** nothing to change. mPanel runs `npm start`, which starts `server.js`, a tiny file server with no dependencies and no database. Old links such as `/shop` and `/product/<slug>` still work, and `/login`, `/account` and `/admin` redirect to the home page.
-- **Any static host (MilesWeb `public_html`, Vercel, Netlify, GitHub Pages):** upload the files, with no build command. `server.js` and `package.json` aren't needed there.
-- **Vercel / Netlify / GitHub Pages:** import the repository as a static site, with no build command and the repository root as the output folder.
+- **MilesWeb (mPanel) Node app:** start command `npm start`, Node 18 or newer. If mPanel doesn't run `npm install`, `npm start` installs the packages itself the first time. No environment variables or database are needed.
+- **Any other Node host (Render, Railway, a VPS):** run `npm install` and `npm start`; the app listens on `PORT`.
