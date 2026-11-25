@@ -195,7 +195,11 @@
     const c = (v) => Math.max(0, Math.min(255, Math.round(v * (1 + amt))));
     return "#" + ((c((n >> 16) & 255) << 16) | (c((n >> 8) & 255) << 8) | c(n & 255)).toString(16).padStart(6, "0");
   }
-  function bottleSvg(name, tone, size) {
+  /**
+   * Bottle drawing. With `labelSrc` (the product's real label front, img/labels/…-front.jpg)
+   * the printed label is wrapped onto the bottle; otherwise a drawn VARAM label is used.
+   */
+  function bottleSvg(name, tone, size, labelSrc) {
     const id = "b" + ++bottleId;
     const t = /^#[0-9a-f]{6}$/i.test(tone || "") ? tone : "#D97706";
     const jar = /ghee|honey/i.test(name);
@@ -218,19 +222,34 @@
 <ellipse cx="120" cy="456" rx="92" ry="12" fill="#000" opacity=".12"/>
 <g clip-path="url(#k${id})"><rect width="240" height="480" fill="#fdf8ee" opacity=".6"/><rect y="${top}" width="240" height="300" fill="url(#o${id})"/><rect x="64" y="150" width="9" height="290" rx="4.5" fill="#fff" opacity=".35"/></g>
 <path d="${body}" fill="none" stroke="#3b2a17" stroke-opacity=".25" stroke-width="1.2"/>${cap}
-<rect x="62" y="248" width="116" height="156" rx="3" fill="#fffdf8"/><rect x="67" y="253" width="106" height="146" rx="2" fill="none" stroke="#D92D20" stroke-width=".9"/>
+${labelSrc && !jar ? realLabel(id, labelSrc, size) : drawnLabel(id, name, label, fs, jar, size)}
+</svg>`;
+  }
+
+  /** The product's printed label, clipped to the bottle with cylinder shading so it reads as wrapped. */
+  function realLabel(id, src, size) {
+    return `<defs><clipPath id="l${id}"><rect x="56" y="222" width="128" height="134" rx="3"/></clipPath>
+<linearGradient id="w${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".34"/><stop offset=".16" stop-color="#000" stop-opacity=".06"/><stop offset=".32" stop-color="#fff" stop-opacity=".2"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".8" stop-color="#000" stop-opacity=".04"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></linearGradient></defs>
+<image href="${esc(src)}" x="56" y="222" width="128" height="134" preserveAspectRatio="xMidYMid slice" clip-path="url(#l${id})"/>
+<rect x="56" y="222" width="128" height="134" rx="3" fill="url(#w${id})"/>
+<rect x="56" y="222" width="128" height="134" rx="3" fill="none" stroke="#3b2a17" stroke-opacity=".18"/>
+${size ? `<rect x="56" y="358" width="128" height="22" rx="3" fill="#fffdf8" opacity=".94"/><text x="120" y="373" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="8.5" letter-spacing="1.2" fill="#7A2E1D">${esc(String(size).toUpperCase())}</text>` : ""}`;
+  }
+
+  /** Drawn VARAM label (ghee, honey, or any product without label artwork). */
+  function drawnLabel(id, name, label, fs, jar, size) {
+    return `<rect x="62" y="248" width="116" height="156" rx="3" fill="#fffdf8"/><rect x="67" y="253" width="106" height="146" rx="2" fill="none" stroke="#D92D20" stroke-width=".9"/>
 <text x="120" y="300" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="22" letter-spacing="4" fill="#D92D20">VARAM</text>
 <line x1="94" x2="146" y1="312" y2="312" stroke="#F59E0B" stroke-width="1.2"/>
 <text x="120" y="336" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="${fs}" fill="#111827">${esc(label)}</text>
 <text x="120" y="353" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="6.6" letter-spacing="1.6" fill="#4B5563">${jar ? (/honey/i.test(name) ? "NATURAL HONEY" : "TRADITIONAL GHEE") : "COLD-PRESSED OIL"}</text>
-${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="8" letter-spacing="1.2" fill="#D97706">${esc(String(size).toUpperCase())}</text>` : ""}
-</svg>`;
+${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="8" letter-spacing="1.2" fill="#D97706">${esc(String(size).toUpperCase())}</text>` : ""}`;
   }
 
   function productVisual(p, size) {
     return p.imageUrl
       ? `<img class="photo" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy">`
-      : bottleSvg(p.name, p.accentColor, size);
+      : bottleSvg(p.name, p.accentColor, size, p.labelFront);
   }
 
   /* ---------------- Toasts ---------------- */
@@ -462,7 +481,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
         ? hits
             .map(
               (p) =>
-                `<a href="products/${esc(p.slug)}.html" role="option" data-name="${esc(p.name)}"><span class="thumb">${bottleSvg(p.name, p.accentColor)}</span><span><b>${esc(p.name)}</b><br><span class="muted">from ${inr(Math.min(...p.variants.map((v) => v.price)))}</span></span></a>`,
+                `<a href="products/${esc(p.slug)}.html" role="option" data-name="${esc(p.name)}"><span class="thumb">${bottleSvg(p.name, p.accentColor, "", p.labelFront)}</span><span><b>${esc(p.name)}</b><br><span class="muted">from ${inr(Math.min(...p.variants.map((v) => v.price)))}</span></span></a>`,
             )
             .join("")
         : `<p class="muted">No products found for “${esc(input.value.trim())}”</p>`;
@@ -573,7 +592,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
   function lineView(l) {
     const meta = findVariant(l.variantId);
     const name = l.name || meta?.product.name || "Product";
-    const visual = l.imageUrl ? `<img src="${esc(l.imageUrl)}" alt="">` : bottleSvg(name, l.accentColor || meta?.product.accentColor);
+    const visual = l.imageUrl ? `<img src="${esc(l.imageUrl)}" alt="">` : bottleSvg(name, l.accentColor || meta?.product.accentColor, "", meta?.product.labelFront);
     const problem = !l.available || l.stock < l.quantity;
     const slug = l.slug || meta?.product.slug;
     return `<div class="line-item" data-line="${l.variantId}">

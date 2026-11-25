@@ -27,7 +27,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/wood-pressed-groundnut-oil-front.jpg",
+        "labelFull": "img/labels/wood-pressed-groundnut-oil-label.jpg"
       },
       {
         "id": 2,
@@ -55,7 +57,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/wood-pressed-white-sesame-oil-front.jpg",
+        "labelFull": "img/labels/wood-pressed-white-sesame-oil-label.jpg"
       },
       {
         "id": 4,
@@ -83,7 +87,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/wood-pressed-coconut-oil-front.jpg",
+        "labelFull": "img/labels/wood-pressed-coconut-oil-label.jpg"
       },
       {
         "id": 5,
@@ -111,7 +117,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/kachi-ghani-mustard-oil-front.jpg",
+        "labelFull": "img/labels/kachi-ghani-mustard-oil-label.jpg"
       },
       {
         "id": 8,
@@ -167,7 +175,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/wood-pressed-black-sesame-oil-front.jpg",
+        "labelFull": "img/labels/wood-pressed-black-sesame-oil-label.jpg"
       },
       {
         "id": 6,
@@ -195,7 +205,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/wood-pressed-sunflower-oil-front.jpg",
+        "labelFull": "img/labels/wood-pressed-sunflower-oil-label.jpg"
       },
       {
         "id": 7,
@@ -223,7 +235,9 @@
             "stockQty": 50,
             "stockStatus": "in"
           }
-        ]
+        ],
+        "labelFront": "img/labels/pure-castor-oil-front.jpg",
+        "labelFull": "img/labels/pure-castor-oil-label.jpg"
       },
       {
         "id": 9,

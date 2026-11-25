@@ -72,6 +72,7 @@
             <button type="button" role="tab" aria-selected="true" aria-controls="tp-0" id="tb-0" data-tab="0">Description</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tp-1" id="tb-1" data-tab="1" tabindex="-1">Details</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tp-2" id="tb-2" data-tab="2" tabindex="-1">Delivery &amp; pickup</button>
+            ${product.labelFull ? `<button type="button" role="tab" aria-selected="false" aria-controls="tp-3" id="tb-3" data-tab="3" tabindex="-1">Label &amp; nutrition</button>` : ""}
           </div>
           <div class="tab-panel" role="tabpanel" id="tp-0" aria-labelledby="tb-0"><p>${esc(product.description || product.tagline)}</p></div>
           <div class="tab-panel hidden" role="tabpanel" id="tp-1" aria-labelledby="tb-1"><dl>
@@ -86,6 +87,16 @@
             <p style="margin-top:8px"><b>Store pickup:</b> always free — ${esc(s.storeAddress || "")}. ${esc(s.storeHours || "")}</p>
             <p style="margin-top:8px"><b>How to order:</b> add to cart and send your order on WhatsApp. We confirm stock, delivery and payment there.</p>
           </div>
+          ${
+            product.labelFull
+              ? `<div class="tab-panel hidden" role="tabpanel" id="tp-3" aria-labelledby="tb-3">
+            <p class="muted" style="margin-bottom:10px">The full printed label on our ${esc(product.name)} bottle — nutrition facts, benefits, FSSAI licence and our Vijayawada outlets.</p>
+            <a class="label-full" href="${esc(product.labelFull)}" target="_blank" rel="noopener" aria-label="Open the full ${esc(product.name)} label">
+              <img src="${esc(product.labelFull)}" alt="Printed label of Varam ${esc(product.name)}: nutrition facts, benefits of cold-pressed oil, FSSAI licence and outlet addresses" loading="lazy" width="1600" height="320"></a>
+            <p style="margin-top:8px;font-size:13px"><a href="${esc(product.labelFull)}" target="_blank" rel="noopener">Open the label full size ↗</a></p>
+          </div>`
+              : ""
+          }
         </div>
       </div>`;
     updateLive();

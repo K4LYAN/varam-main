@@ -1806,3 +1806,19 @@ html, body { overflow-x: clip; }
 @media (max-width: 420px) { .reach-card { padding: 18px; } }
 
 .wa-hint { margin: 8px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+
+/* Product page: full printed label (Label & nutrition tab). It is a wide wrap-around
+   label, so it scrolls sideways on small screens instead of shrinking unreadably. */
+.label-full {
+  display: block;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.label-full img {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+}
