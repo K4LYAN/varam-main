@@ -1822,3 +1822,11 @@ html, body { overflow-x: clip; }
   min-width: 760px;
   height: auto;
 }
+
+/* Header: keep the cart and menu buttons on the right edge. From 1024px the search box
+   (margin-left: auto) pushes them there; below that it is hidden, so they push themselves. */
+@media (max-width: 1023.98px) {
+  .site-header .header-actions {
+    margin-left: auto;
+  }
+}
