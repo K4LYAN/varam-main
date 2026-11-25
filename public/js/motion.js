@@ -142,9 +142,21 @@
       }
     };
     walk(el);
+    // Each word rises out of its own line with a slight tilt and comes into focus
     el.querySelectorAll(".w > span").forEach((s, i) => {
-      animate(s, [{ transform: "translateY(110%)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 900, delay: 120 + i * 55 });
+      animate(
+        s,
+        [
+          { transform: "translateY(115%) rotate(6deg)", opacity: 0, filter: "blur(8px)" },
+          { transform: "translateY(-6%) rotate(0deg)", opacity: 1, filter: "blur(0)", offset: 0.72 },
+          { transform: "none", opacity: 1, filter: "blur(0)" },
+        ],
+        { duration: 1100, delay: 160 + i * 75, easing: "cubic-bezier(.2,.8,.2,1)" },
+      );
     });
+    // Then the brush underline is drawn under the italic line
+    el.classList.add("is-split");
+    setTimeout(() => el.classList.add("is-drawn"), 160 + el.querySelectorAll(".w").length * 75 + 650);
   }
 
   /* ---------- Counters (data-count="4.9" data-decimals="1") ---------- */

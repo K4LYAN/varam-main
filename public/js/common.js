@@ -425,7 +425,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
       <div class="utility" aria-label="Store contact"><div class="marquee">${utilityTrack(s)}${utilityTrack(s, true)}</div></div>
       ${s.announcement ? `<div class="announce">${esc(s.announcement)}</div>` : ""}
       <header class="site-header"><div class="container">
-        <a class="brand" href="index.html" aria-label="Varam home"><img src="img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
+        <a class="brand" href="index.html" aria-label="Varam&#39;s home"><img src="img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM&#39;S</b><small>COLD-PRESSED OILS</small></span></a>
         <nav class="main-nav" aria-label="Main">${NAV.map((n) => `<a href="${n.href}"${location.pathname.endsWith("/" + n.href) ? ' aria-current="page"' : ""}>${n.label}</a>`).join("")}</nav>
         <div class="header-search" role="search">${I.search}
           <input type="search" id="site-search" placeholder="Search oils, ghee, honey…" autocomplete="off" aria-label="Search products" aria-controls="search-results">
@@ -516,7 +516,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     const cats = (state.catalog?.categories || []).map((c) => `<li><a href="shop.html?category=${esc(c.slug)}">${esc(c.name)}</a></li>`).join("");
     mount.innerHTML = `<footer class="site-footer"><div class="container">
       <div class="cols">
-        <div><a class="brand" href="index.html"><img src="img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM</b><small>COLD-PRESSED OILS</small></span></a>
+        <div><a class="brand" href="index.html"><img src="img/varam-logo.jpg" alt="" width="44" height="44"><span><b>VARAM&#39;S</b><small>COLD-PRESSED OILS</small></span></a>
           <p class="f-about">Cold-pressed oils, pure ghee and honey from Vijayawada.</p></div>
         <div><h4>Shop</h4><ul>${cats}</ul></div>
         <div><h4>Help</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="index.html#process">Our Process</a></li><li><a href="index.html#store">Visit our store</a></li>${
@@ -528,7 +528,7 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
           ${s.emails?.primary ? `<li>${I.mail}<a href="mailto:${esc(s.emails.primary)}">${esc(s.emails.primary)}</a></li>` : ""}
           <li>${I.pin}<span>BRTS Rd, Vijayawada</span></li></ul></div>
       </div>
-      <div class="legal"><span>© ${new Date().getFullYear()} Varam Organic Oil, Vijayawada</span><span>Shipping across India &amp; worldwide</span></div>
+      <div class="legal"><span>© ${new Date().getFullYear()} Varam&#39;s · Varam Organic Oil, Vijayawada</span><span>Shipping across India &amp; worldwide</span></div>
     </div></footer>
     <a class="wa-float" href="https://wa.me/${esc(s.whatsappNumber)}?text=${encodeURIComponent("Hello Varam! I'd like to know more about your oils.")}" target="_blank" rel="noopener" aria-label="Chat with Varam on WhatsApp">${I.wa}</a>`;
   }
