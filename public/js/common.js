@@ -218,9 +218,10 @@
     return `<svg class="bottle-svg" viewBox="0 0 240 480" role="img" aria-label="${esc(name)}">
 <defs><clipPath id="k${id}"><path d="${body}"/></clipPath>
 <linearGradient id="o${id}" x1="0" x2="1"><stop offset="0" stop-color="${shade(t, -0.38)}"/><stop offset=".3" stop-color="${t}"/><stop offset=".55" stop-color="${shade(t, 0.2)}"/><stop offset=".8" stop-color="${t}"/><stop offset="1" stop-color="${shade(t, -0.38)}"/></linearGradient>
-<linearGradient id="c${id}" x1="0" x2="1"><stop offset="0" stop-color="#7f1d1d"/><stop offset=".45" stop-color="#dc2626"/><stop offset="1" stop-color="#7f1d1d"/></linearGradient></defs>
+<linearGradient id="c${id}" x1="0" x2="1"><stop offset="0" stop-color="#7f1d1d"/><stop offset=".45" stop-color="#dc2626"/><stop offset="1" stop-color="#7f1d1d"/></linearGradient>
+<linearGradient id="g${id}" x1="0" x2="1"><stop offset="0" stop-color="#1c1208" stop-opacity=".34"/><stop offset=".13" stop-color="#1c1208" stop-opacity="0"/><stop offset=".22" stop-color="#fff" stop-opacity=".5"/><stop offset=".29" stop-color="#fff" stop-opacity="0"/><stop offset=".74" stop-color="#fff" stop-opacity="0"/><stop offset=".83" stop-color="#fff" stop-opacity=".22"/><stop offset=".9" stop-color="#1c1208" stop-opacity=".05"/><stop offset="1" stop-color="#1c1208" stop-opacity=".36"/></linearGradient></defs>
 <ellipse cx="120" cy="456" rx="92" ry="12" fill="#000" opacity=".12"/>
-<g clip-path="url(#k${id})"><rect width="240" height="480" fill="#fdf8ee" opacity=".6"/><rect y="${top}" width="240" height="300" fill="url(#o${id})"/><rect x="64" y="150" width="9" height="290" rx="4.5" fill="#fff" opacity=".35"/></g>
+<g clip-path="url(#k${id})"><rect width="240" height="480" fill="#fdf8ee" opacity=".6"/><rect y="${top}" width="240" height="300" fill="url(#o${id})"/><ellipse cx="120" cy="${top}" rx="70" ry="4.5" fill="#fff" opacity=".38"/><ellipse cx="120" cy="447" rx="64" ry="5" fill="#fff" opacity=".18"/><rect width="240" height="480" fill="url(#g${id})"/></g>
 <path d="${body}" fill="none" stroke="#3b2a17" stroke-opacity=".25" stroke-width="1.2"/>${cap}
 ${labelSrc && !jar ? realLabel(id, labelSrc, size) : drawnLabel(id, name, label, fs, jar, size)}
 </svg>`;

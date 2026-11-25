@@ -1830,3 +1830,70 @@ html, body { overflow-x: clip; }
     margin-left: auto;
   }
 }
+
+/* ---------------- Product page bottle ---------------- */
+/* Flat bottle (fallback and while 3D loads): pin it inside the square box so the whole
+   bottle shows — a % height inside the grid cell did not resolve, so it overflowed. */
+.pdp-media #pdp-visual > svg {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  height: 88%;
+  width: auto;
+  transform: translateX(-50%);
+}
+.pdp-media:hover #pdp-visual > svg {
+  transform: translateX(-50%) scale(1.03);
+}
+.pdp-media #pdp-visual > img {
+  position: absolute;
+}
+
+/* 3D bottle (js/bottle3d.js) */
+.pdp-3d {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+  cursor: grab;
+  touch-action: pan-y; /* vertical swipes still scroll the page */
+}
+.pdp-3d.ready {
+  opacity: 1;
+}
+.pdp-3d.grabbing {
+  cursor: grabbing;
+}
+.pdp-3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pdp-media.has-3d #pdp-visual > svg {
+  visibility: hidden; /* kept in the layout: "add to cart" flies from it */
+}
+.pdp-media.has-3d .ring {
+  opacity: 0.45;
+}
+.pdp-media .heart {
+  z-index: 2;
+}
+.pdp-3d-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(43, 26, 16, 0.72);
+  color: #fff8ec;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease);
+}
+.pdp-3d-hint.gone {
+  opacity: 0;
+}

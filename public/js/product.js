@@ -219,6 +219,25 @@
     }).observe(add);
   };
 
+  /** Replace the flat bottle with the interactive 3D one (js/bottle3d.js); on any failure the flat bottle stays. */
+  async function mount3d() {
+    if (!product || product.imageUrl) return; // a real product photo wins over the bottle
+    try {
+      if (!window.VaramBottle3D) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "js/bottle3d.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      await window.VaramBottle3D.mount($(".pdp-media"), product);
+    } catch (err) {
+      console.warn("[varam] 3D bottle unavailable, showing the flat bottle:", err && err.message);
+    }
+  }
+
   window.Varam.ready().then(async () => {
     try {
       const data = await api("GET", `/api/products/${encodeURIComponent(slug)}`);
@@ -230,6 +249,7 @@
       $("#related").innerHTML = related.map(relatedCard).join("");
       M?.init();
       watchSticky();
+      mount3d();
     } catch (err) {
       $("#pdp").innerHTML = `<div class="empty" style="grid-column:1/-1"><h1>Product not found</h1><p class="muted" style="margin:8px 0 16px">${esc(err.message)}</p><a class="btn btn-primary" href="shop.html">Back to shop</a></div>`;
     }
