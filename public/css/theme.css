@@ -222,21 +222,6 @@ h4 {
   margin-top: 4px;
   opacity: 0.8;
 }
-.ships-note {
-  margin-top: 14px;
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  padding: 6px 12px;
-  border: 1px solid #4a3423;
-  border-radius: 999px;
-  color: #f1d48a;
-}
-.ships-note svg {
-  width: 16px;
-  height: 16px;
-}
 
 /* ---------- Hero ---------- */
 .hero.hero-natural {
@@ -335,119 +320,6 @@ h4 {
   height: 18px;
   color: var(--leaf-600);
 }
-.hero-art {
-  position: relative;
-  height: 400px;
-  display: grid;
-  place-items: center;
-}
-.ghani-ring {
-  position: absolute;
-  width: min(360px, 82vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, var(--paper) 0 55%, transparent 56%),
-    repeating-conic-gradient(from 0deg, #c99a4a 0 6deg, #b08a3e 6deg 12deg);
-  box-shadow:
-    inset 0 0 0 10px #e8d3a6,
-    inset 0 0 0 12px #b08a3e,
-    0 30px 60px -30px rgba(43, 26, 16, 0.5);
-}
-.ghani-ring::after {
-  content: "";
-  position: absolute;
-  inset: 18%;
-  border-radius: 50%;
-  background: var(--kolam-bloom) no-repeat center / 86%;
-  opacity: 0.6;
-}
-.hero-art .bottles {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  margin-top: 30px;
-}
-.hero-art .bottles svg {
-  height: 250px;
-  width: auto;
-  filter: drop-shadow(0 26px 22px rgba(43, 26, 16, 0.28));
-  animation: bob 6s ease-in-out infinite;
-}
-.hero-art .bottles svg:nth-child(1),
-.hero-art .bottles svg:nth-child(3) {
-  height: 196px;
-  margin: 0 -24px;
-}
-.hero-art .bottles svg:nth-child(2) {
-  animation-delay: -2s;
-}
-.hero-art .bottles svg:nth-child(3) {
-  animation-delay: -4s;
-}
-@media (max-width: 600px) {
-  .hero-art .bottles svg {
-    height: 200px;
-  }
-  .hero-art .bottles svg:nth-child(1),
-  .hero-art .bottles svg:nth-child(3) {
-    height: 156px;
-  }
-}
-.hero-art .sprig {
-  position: absolute;
-  width: 130px;
-  color: var(--leaf);
-  z-index: 2;
-}
-.hero-art .sprig.s1 {
-  left: 4%;
-  bottom: 14%;
-  transform: rotate(-8deg);
-}
-.hero-art .sprig.s2 {
-  right: 6%;
-  top: 12%;
-  width: 96px;
-  transform: rotate(160deg);
-  color: #7f9a3a;
-}
-.hero-art .seal {
-  position: absolute;
-  right: 8%;
-  bottom: 10%;
-  z-index: 2;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  background: var(--crimson);
-  color: #fbe9c9;
-  box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--crimson), var(--shadow);
-  transform: rotate(-10deg);
-}
-.hero-art .seal b {
-  font-family: var(--head);
-  font-size: 24px;
-  line-height: 1;
-}
-.hero-art .seal span {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-@media (max-width: 600px) {
-  .hero-art {
-    height: 320px;
-  }
-  .hero-art .seal {
-    width: 78px;
-    height: 78px;
-  }
-}
 
 /* ---------- Promises strip ---------- */
 .promises {
@@ -513,12 +385,6 @@ h4 {
   transform: translateX(-50%);
   background: var(--kolam-rule) repeat-x center / 48px 14px;
 }
-.bg-white {
-  background: var(--white);
-}
-.bg-blush {
-  background: var(--blush);
-}
 
 /* Product cards: warm paper */
 .card {
@@ -533,19 +399,18 @@ h4 {
 .pdp .price b {
   font-family: var(--head);
 }
-.pills .pill,
 .chips .chip {
   background: var(--white);
   border-color: var(--line);
 }
-.pills .pill[aria-pressed="true"],
 .chips .chip[aria-pressed="true"] {
   background: var(--crimson);
   border-color: var(--crimson);
   color: #fff;
 }
 /* Style the rounded field itself — the .catalog-search label around it is a square box
-   and must stay transparent, or its corners show behind the rounded edges */
+   and must stay transparent,
+or its corners show behind the rounded edges */
 .catalog-search input,
 .select {
   background-color: var(--white);
@@ -920,7 +785,9 @@ h4 {
   letter-spacing: 0;
 }
 /* =====================================================================
-   Real photos: hero arch, process steps, kitchen note
+   Real photos: hero arch,
+process steps,
+kitchen note
    ===================================================================== */
 .hero-photo {
   position: relative;
@@ -1318,7 +1185,7 @@ h4 {
     align-items: center;
   }
   .sf-close,
-  .sf-apply {
+.sf-apply {
     display: inline-flex;
   }
   .sf-close svg {
@@ -1525,8 +1392,8 @@ h4 {
     line-height: 1.25;
   }
   .card .tagline,
-  .card .stars,
-  .card .badges .badge-in {
+.card .stars,
+.card .badges .badge-in {
     display: none;
   }
   .card .sizes {
@@ -1543,7 +1410,7 @@ h4 {
     display: block;
   }
   .card .add-btn,
-  .card .stepper {
+.card .stepper {
     width: 100%;
     justify-content: space-between;
   }
@@ -1798,7 +1665,8 @@ img {
 }
 
 /* ---------- Never scroll sideways on small screens ---------- */
-html, body { overflow-x: clip; }
+html,
+body { overflow-x: clip; }
 .reach-card { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .reach-card * { overflow-wrap: anywhere; }
 .reach { grid-template-columns: minmax(0, 1fr); }
@@ -1808,7 +1676,8 @@ html, body { overflow-x: clip; }
 .wa-hint { margin: 8px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
 
 /* Product page: full printed label (Label & nutrition tab). It is a wide wrap-around
-   label, so it scrolls sideways on small screens instead of shrinking unreadably. */
+   label,
+so it scrolls sideways on small screens instead of shrinking unreadably. */
 .label-full {
   display: block;
   overflow-x: auto;
@@ -1824,7 +1693,8 @@ html, body { overflow-x: clip; }
 }
 
 /* Header: keep the cart and menu buttons on the right edge. From 1024px the search box
-   (margin-left: auto) pushes them there; below that it is hidden, so they push themselves. */
+   (margin-left: auto) pushes them there; below that it is hidden,
+so they push themselves. */
 @media (max-width: 1023.98px) {
   .site-header .header-actions {
     margin-left: auto;
@@ -1833,7 +1703,8 @@ html, body { overflow-x: clip; }
 
 /* ---------------- Product page bottle ---------------- */
 /* Flat bottle (fallback and while 3D loads): pin it inside the square box so the whole
-   bottle shows — a % height inside the grid cell did not resolve, so it overflowed. */
+   bottle shows — a % height inside the grid cell did not resolve,
+so it overflowed. */
 .pdp-media #pdp-visual > svg {
   position: absolute;
   left: 50%;
@@ -1959,7 +1830,9 @@ html, body { overflow-x: clip; }
   font-weight: 500;
 }
 @media (max-width: 959px) {
-  /* On phones the bloom sat right behind the headline: smaller, further out, lighter */
+  /* On phones the bloom sat right behind the headline: smaller,
+further out,
+lighter */
   .hero-natural .kolam-bloom {
     width: 300px;
     height: 300px;

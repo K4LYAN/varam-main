@@ -24,52 +24,7 @@
 .w > span {
   display: inline-block;
 }
-.hero .orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.55;
-  pointer-events: none;
-  animation: drift 14s ease-in-out infinite alternate;
-}
-.hero .orb.o1 {
-  width: 340px;
-  height: 340px;
-  background: #f59e0b;
-  top: -80px;
-  right: 8%;
-}
-.hero .orb.o2 {
-  width: 260px;
-  height: 260px;
-  background: #fb7185;
-  bottom: -60px;
-  left: -40px;
-  animation-delay: -5s;
-}
-.hero .orb.o3 {
-  width: 180px;
-  height: 180px;
-  background: #84cc16;
-  top: 40%;
-  left: 45%;
-  opacity: 0.25;
-  animation-delay: -9s;
-}
-@keyframes drift {
-  to {
-    transform: translate(40px, -30px) scale(1.15);
-  }
-}
-.showcase .bottles svg {
-  animation: bob 6s ease-in-out infinite;
-}
-.showcase .bottles svg:nth-child(2) {
-  animation-delay: -2s;
-}
-.showcase .bottles svg:nth-child(3) {
-  animation-delay: -4s;
-}
+
 @keyframes bob {
   50% {
     transform: translateY(-10px);
@@ -92,7 +47,9 @@
   transform: translateX(120%);
 }
 
-/* ---------- Product cards: tilt glare, full-card link, wishlist heart ---------- */
+/* ---------- Product cards: tilt glare,
+full-card link,
+wishlist heart ---------- */
 .card {
   position: relative;
   transform-style: preserve-3d;
@@ -181,11 +138,6 @@
   font-family: var(--head);
   font-weight: 700;
   letter-spacing: 0.04em;
-}
-.marquee .track {
-  display: flex;
-  width: max-content;
-  animation: marquee 34s linear infinite;
 }
 .marquee span {
   display: inline-flex;
@@ -558,15 +510,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero .orb,
-  .showcase .bottles svg,
-  .marquee .track,
   .pdp-media .ring,
-  .empty-art {
+.empty-art {
     animation: none !important;
   }
 }
 
 /* Staggered reveal children (was injected by motion.js; CSP forbids inline <style>) */
-[data-reveal][data-stagger] > *{will-change:opacity,transform}
+[data-reveal][data-stagger] > * {will-change:opacity,transform}
 
