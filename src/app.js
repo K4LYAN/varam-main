@@ -29,7 +29,11 @@ app.use(
   express.static(PUBLIC, {
     extensions: ["html"],
     setHeaders(res, file) {
-      res.set("Cache-Control", file.endsWith(".html") ? "no-cache" : "public, max-age=3600");
+      // Pages, styles and scripts: browsers check for a new version on every visit (a quick
+      // 304 when nothing changed), so a deploy shows up immediately. Images and fonts
+      // rarely change, so they may be kept for a week.
+      const longLived = /\.(jpe?g|png|webp|gif|svg|ico|woff2?)$/i.test(file);
+      res.set("Cache-Control", longLived ? "public, max-age=604800" : "no-cache");
     },
   })
 );
