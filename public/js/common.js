@@ -1045,3 +1045,23 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
     ready: () => state.ready,
   };
 })();
+
+/* Frosted header: show its hairline border and shadow once the page has scrolled. */
+(() => {
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    document.querySelector(".site-header")?.classList.toggle("is-scrolled", window.scrollY > 8);
+  };
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true },
+  );
+  document.addEventListener("DOMContentLoaded", update);
+})();

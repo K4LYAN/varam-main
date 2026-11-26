@@ -1,0 +1,720 @@
+/* =====================================================================
+   Varam's — premium finish on the original "Gaanuga" palette
+   Loaded last on every page. It only re-maps design tokens and refines
+   surfaces, type, spacing and motion; no markup, routes or cart logic
+   depend on it. Remove this one <link> to return to the previous look.
+
+   Palette (the brand's own colours, refined)
+     Parchment     #FBF6EC  main canvas
+     Ghani sand    #F4EAD7  alternating sections
+     Tamarind      #2B1A10  type + footer
+     Kumkum        #8E2B1B  primary calls to action, the one bold colour
+     Turmeric      #C8891A  highlights, focus, small accents
+     Curry leaf    #5F7F22  stock and "natural" badges
+
+   Token names below (--gold, --sage, --botanical) are kept from the
+   first refresh so the component rules stay unchanged:
+     --gold = turmeric, --sage = curry leaf, --botanical = tamarind.
+   ===================================================================== */
+
+:root {
+  /* Base palette */
+  --alabaster: #fbf6ec;
+  --sand: #f4ead7;
+  --botanical: #2b1a10;
+  --kumkum: #8e2b1b;
+  --kumkum-600: #76220f;
+  --gold: #c8891a;
+  --gold-600: #a86f12;
+  --gold-50: #fbf1da;
+  --sage: #5f7f22;
+  --sage-600: #4f6b1a;
+  --sage-50: #eef2e0;
+  --surface: #fffcf6;
+  --hairline: rgba(43, 26, 16, 0.08);
+  --hairline-strong: rgba(43, 26, 16, 0.15);
+
+  /* Existing theme tokens */
+  --crimson: var(--kumkum);
+  --crimson-600: var(--kumkum-600);
+  --crimson-700: #5e1a0c;
+  --crimson-50: #f8e9df;
+  --leaf: var(--sage);
+  --leaf-600: var(--sage-600);
+  --leaf-50: var(--sage-50);
+  --amber: #a86f12;
+  --amber-400: #e0a82e;
+  --amber-50: var(--gold-50);
+  --brass: #b08a3e;
+  --white: var(--surface);
+  --cream: var(--alabaster);
+  --paper: var(--sand);
+  --blush: var(--sand);
+  --ink: var(--botanical);
+  --slate: #5c4636;
+  --muted: #84705d;
+  --line: #e7d9bf;
+
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(43, 26, 16, 0.04), 0 12px 32px -8px rgba(43, 26, 16, 0.07);
+  --shadow-hover: 0 2px 4px rgba(43, 26, 16, 0.04), 0 22px 44px -12px rgba(43, 26, 16, 0.16);
+  --shadow-lg: 0 30px 60px -24px rgba(43, 26, 16, 0.3);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --head: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------------- Canvas & type ---------------- */
+
+html,
+body {
+  background-color: var(--alabaster);
+  background-image: none;
+}
+body {
+  color: var(--ink);
+  font-family: var(--body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--head);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+::selection {
+  background: rgba(200, 137, 26, 0.28);
+  color: var(--ink);
+}
+/* Section labels: a kumkum bindu and an italic serif line,
+in sentence case,
+instead of tracked-out capitals between diamonds */
+.kicker {
+  font-family: var(--head);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--amber);
+  gap: 10px;
+}
+.kicker::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: none;
+  background: var(--kumkum);
+  box-shadow: 0 0 0 3px rgba(142, 43, 27, 0.12);
+}
+.kicker::after {
+  display: none;
+}
+.card-cat {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--amber);
+}
+.section-head h2 {
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
+  font-weight: 600;
+}
+.section-head p {
+  color: var(--slate);
+  line-height: 1.6;
+}
+
+/* ---------------- Section rhythm ---------------- */
+
+.section {
+  padding: 56px 0;
+}
+@media (min-width: 768px) {
+  .section {
+    padding: 88px 0;
+  }
+}
+@media (min-width: 1200px) {
+  .section {
+    padding: 104px 0;
+  }
+}
+.section-head {
+  margin-bottom: 40px;
+}
+.section-paper {
+  background: var(--sand);
+  border-color: var(--hairline);
+}
+.grid {
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .grid {
+    gap: 28px;
+  }
+}
+
+/* ---------------- Frosted header ---------------- */
+
+.site-header {
+  background: rgba(251, 246, 236, 0.85);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease), background 0.3s var(--ease);
+}
+.site-header.is-scrolled {
+  background: rgba(251, 246, 236, 0.9);
+  border-bottom-color: var(--hairline);
+  box-shadow: 0 8px 24px -18px rgba(43, 26, 16, 0.35);
+}
+.brand b {
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+.brand small {
+  color: var(--gold-600);
+  letter-spacing: 0.16em;
+}
+.brand img {
+  border-color: var(--gold-50);
+}
+.main-nav a {
+  font-family: var(--body);
+  font-weight: 500;
+  color: var(--slate);
+  transition: color 0.2s var(--ease);
+}
+.main-nav a:hover,
+.main-nav a[aria-current="page"] {
+  color: var(--ink);
+}
+.header-search input,
+.catalog-search input,
+.select,
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="search"],
+input[type="number"],
+textarea {
+  background-color: var(--surface);
+  border-color: var(--hairline-strong);
+  font-family: var(--body);
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.header-search input:focus,
+.catalog-search input:focus,
+.select:focus,
+input:focus,
+textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(200, 137, 26, 0.18);
+  outline: none;
+}
+.utility,
+.announce {
+  background: var(--botanical);
+  color: #eadcc0;
+  border-bottom: 0;
+}
+.utility a,
+.announce a {
+  color: #f1c66b;
+}
+
+/* ---------------- Buttons ---------------- */
+
+.btn {
+  font-family: var(--body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background-color 0.25s var(--ease),
+    color 0.25s var(--ease),
+    border-color 0.25s var(--ease),
+    box-shadow 0.3s var(--ease),
+    transform 0.3s var(--ease);
+  will-change: transform;
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  transition-duration: 0.08s;
+}
+.btn-primary {
+  background: var(--kumkum);
+  color: #fffaf0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 8px 20px -10px rgba(142, 43, 27, 0.65);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--kumkum-600);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 14px 28px -12px rgba(142, 43, 27, 0.75);
+}
+.btn-dark {
+  background: var(--botanical);
+  color: var(--alabaster);
+}
+.btn-dark:hover:not(:disabled) {
+  background: #1c1009;
+  box-shadow: 0 14px 28px -14px rgba(43, 26, 16, 0.6);
+}
+.btn-outline {
+  background: var(--surface);
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 10px 22px -14px rgba(43, 26, 16, 0.4);
+}
+.btn-wa {
+  background: #1f8a4c;
+}
+.btn-wa:hover:not(:disabled) {
+  background: #18733f;
+}
+.link-arrow {
+  color: var(--ink);
+  font-family: var(--body);
+  font-weight: 600;
+}
+.link-arrow:hover {
+  color: var(--gold-600);
+}
+
+/* Keyboard focus: kumkum ring (8:1 on parchment; turmeric was too faint at 2.6:1) */
+:focus-visible {
+  outline: 2px solid var(--kumkum);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.btn:focus-visible,
+.size:focus-visible,
+.chip:focus-visible {
+  outline: 2px solid var(--kumkum);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+/* ---------------- Product cards ---------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition:
+    box-shadow 0.45s var(--ease),
+    transform 0.45s var(--ease),
+    border-color 0.45s var(--ease);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--hairline-strong);
+}
+.card-media {
+  background:
+    radial-gradient(70% 60% at 50% 38%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, var(--sand) 0%, #ecdfc6 100%);
+  border-bottom: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.card-media svg,
+.card-media img {
+  transition: transform 0.7s var(--ease);
+  transform-origin: 50% 80%;
+}
+.card:hover .card-media svg {
+  transform: translateY(4%) scale(1.03);
+}
+.card:hover .card-media img {
+  transform: scale(1.03);
+}
+.card-body {
+  padding: 18px;
+}
+@media (min-width: 768px) {
+  .card-body {
+    padding: 22px 22px 24px;
+  }
+}
+.card h3 {
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+@media (min-width: 768px) {
+  .card h3 {
+    font-size: 20px;
+  }
+}
+.card .tagline {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--slate);
+}
+.card .price,
+.pdp .price b,
+.price-big b {
+  font-family: var(--body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.price-row {
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  margin-top: auto;
+}
+.price-row small {
+  color: var(--muted);
+}
+
+/* Badges: crisp pills */
+.badges {
+  top: 14px;
+  left: 14px;
+  right: 14px;
+}
+.badge {
+  font-family: var(--body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.badge-brand {
+  background: var(--kumkum);
+  color: #fbefd4;
+}
+.badge-in {
+  background: rgba(233, 240, 234, 0.92);
+  color: var(--sage-600);
+  border: 1px solid rgba(95, 127, 34, 0.22);
+}
+.badge-low {
+  background: rgba(248, 239, 220, 0.94);
+  color: #7a4e0c;
+  border: 1px solid rgba(200, 137, 26, 0.3);
+}
+.badge-out {
+  background: rgba(243, 239, 230, 0.94);
+  color: var(--slate);
+  border: 1px solid var(--hairline-strong);
+}
+
+/* Pack sizes,
+chips and steppers */
+.size,
+.chip,
+.chips .chip {
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
+  font-family: var(--body);
+  font-weight: 600;
+  transition:
+    background-color 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    color 0.2s var(--ease),
+    transform 0.2s var(--ease);
+}
+.size:hover,
+.chip:hover {
+  border-color: var(--ink);
+}
+.size:active,
+.chip:active {
+  transform: scale(0.97);
+}
+.size[aria-checked="true"],
+.chip.on,
+.chips .chip[aria-pressed="true"] {
+  background: var(--botanical);
+  border-color: var(--botanical);
+  color: var(--alabaster);
+}
+/* Card stepper: takes the place of the kumkum "Add" button once an item is in the
+   cart,
+so it keeps the same colour; the change reads as "added",
+not "gone". */
+.stepper {
+  background: var(--kumkum);
+  color: #fffaf0;
+  box-shadow: 0 8px 20px -10px rgba(142, 43, 27, 0.65);
+  animation: stepper-in 0.28s var(--ease);
+}
+.stepper button {
+  color: inherit;
+  transition: background-color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.stepper button:hover:not(:disabled) {
+  background: rgba(255, 250, 240, 0.16);
+}
+.stepper button:active:not(:disabled) {
+  transform: scale(0.9);
+}
+.stepper button:focus-visible {
+  outline-color: #f1c66b;
+  outline-offset: -3px;
+}
+.stepper output {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes stepper-in {
+  from {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+}
+
+/* Quantity control in the cart drawer and on the product page: light,
+on light */
+.qty {
+  background: var(--surface);
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+.qty button {
+  color: inherit;
+  transition: background-color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.qty button:hover:not(:disabled) {
+  background: var(--sand);
+}
+.qty button:active:not(:disabled) {
+  transform: scale(0.9);
+}
+.qty button:focus-visible {
+  outline-offset: -3px;
+}
+
+/* ---------------- Category tiles ---------------- */
+
+.cat-tile {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.cat-tile img {
+  transition: transform 0.8s var(--ease);
+}
+.cat-tile:hover img {
+  transform: scale(1.04);
+}
+.cat-tiles {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(43, 26, 16, 0.18) transparent;
+}
+.cat-tiles::-webkit-scrollbar {
+  height: 6px;
+}
+.cat-tiles::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cat-tiles::-webkit-scrollbar-thumb {
+  background: rgba(43, 26, 16, 0.16);
+  border-radius: 999px;
+}
+.cat-tiles::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* ---------------- Hero ---------------- */
+
+.hero.hero-natural {
+  background:
+    radial-gradient(1100px 520px at 88% 12%, rgba(200, 137, 26, 0.16), transparent 60%),
+    radial-gradient(900px 520px at -5% 105%, rgba(95, 127, 34, 0.14), transparent 60%),
+    var(--alabaster);
+  border-bottom: 1px solid var(--hairline);
+}
+.hero-natural .eyebrow {
+  background: var(--surface);
+  border-color: var(--hairline-strong);
+  font-family: var(--body);
+  font-weight: 500;
+}
+.hero-natural .eyebrow .te,
+.page-hero .eyebrow .te {
+  color: var(--kumkum);
+}
+.hero-natural h1 em {
+  color: var(--kumkum);
+}
+.hero-natural .ships {
+  background: var(--sage-50);
+  border-color: rgba(95, 127, 34, 0.2);
+}
+.hero-natural .ships svg {
+  color: var(--sage);
+}
+.page-hero {
+  background:
+    radial-gradient(900px 400px at 90% 0%, rgba(200, 137, 26, 0.12), transparent 60%),
+    var(--sand);
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* Promise strip,
+steps,
+notes and reach cards: tactile surfaces */
+.promises {
+  background: var(--surface);
+  border-color: var(--hairline);
+}
+.promises .ic,
+.contact-list .ci {
+  background: var(--sage-50);
+  color: var(--sage);
+}
+.ghani-steps li,
+.note-card,
+.reach-card,
+.testimonial,
+.faq-d,
+.label-full,
+.shop-filters,
+.reviews-summary {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.ghani-steps .num {
+  background: var(--botanical);
+  color: #fbefd4;
+}
+.faq-d[open] {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+/* ---------------- Product page ---------------- */
+
+.pdp-media {
+  background:
+    radial-gradient(65% 55% at 50% 40%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, var(--sand), #eadcc2);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+}
+.pdp h1 {
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+.tab-list button {
+  font-family: var(--body);
+  font-weight: 600;
+}
+.pdp-info dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 20px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+}
+.pdp-info dt {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------------- Cart drawer ---------------- */
+
+.drawer {
+  background: var(--alabaster);
+  border-left: 1px solid var(--hairline);
+  box-shadow: -30px 0 60px -30px rgba(43, 26, 16, 0.35);
+  transition: transform 0.5s var(--ease), visibility 0.5s;
+}
+.drawer-head,
+.drawer-foot {
+  border-color: var(--hairline);
+  background: var(--alabaster);
+}
+.line-item {
+  border-color: var(--hairline);
+}
+.sf-backdrop {
+  background: rgba(43, 26, 16, 0.38);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+/* ---------------- Footer ---------------- */
+
+.site-footer {
+  background: var(--botanical);
+  color: #d9c7a8;
+}
+.site-footer h4,
+.site-footer .brand b {
+  color: #f6e7c8;
+}
+.site-footer a {
+  transition: color 0.2s var(--ease);
+}
+.site-footer a:hover {
+  color: #f1c66b;
+}
+.site-footer .legal {
+  border-top-color: rgba(244, 237, 224, 0.12);
+  color: #a8927a;
+}
+
+/* ---------------- Scroll reveal (motion-safe) ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .btn,
+  .card-media svg,
+  .card-media img,
+  .cat-tile img,
+  .drawer {
+    transition: none !important;
+  }
+  .stepper {
+    animation: none;
+  }
+  .card:hover,
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ---------------- Overflow guards ---------------- */
+
+html,
+body {
+  overflow-x: clip;
+}
+img,
+svg,
+video,
+iframe {
+  max-width: 100%;
+}
