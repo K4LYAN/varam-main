@@ -718,3 +718,96 @@ video,
 iframe {
   max-width: 100%;
 }
+
+/* ---------------- Floating Call + WhatsApp buttons ---------------- */
+
+/* Stacked in the bottom-right corner: Call (kumkum) above WhatsApp (green).
+   Labelled pills on tablets and desktops; round icon buttons on phones. */
+.contact-float {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  transition: bottom 0.35s var(--ease);
+}
+/* Move up while the product page's sticky "Add to cart" bar is showing */
+body:has(.sticky-buy.show) .contact-float {
+  bottom: calc(88px + env(safe-area-inset-bottom));
+}
+.contact-float .wa-float,
+.contact-float .call-float {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), background-color 0.2s var(--ease);
+}
+.contact-float span {
+  display: none;
+}
+.contact-float .call-float {
+  background: var(--kumkum);
+  box-shadow: 0 12px 26px -10px rgba(142, 43, 27, 0.7);
+}
+.contact-float .call-float:hover {
+  background: var(--kumkum-600);
+}
+.contact-float .wa-float {
+  background: #1f8a4c;
+  box-shadow: 0 12px 26px -10px rgba(31, 138, 76, 0.7);
+}
+.contact-float .wa-float:hover {
+  background: #18733f;
+}
+.contact-float a:hover {
+  transform: translateY(-2px);
+}
+.contact-float a:active {
+  transform: scale(0.96);
+}
+.contact-float .call-float svg {
+  width: 22px;
+  height: 22px;
+}
+.contact-float .wa-float svg {
+  width: 26px;
+  height: 26px;
+}
+.contact-float a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+@media (min-width: 640px) {
+  .contact-float .wa-float,
+  .contact-float .call-float {
+    width: auto;
+    padding: 0 20px 0 16px;
+  }
+  .contact-float {
+    align-items: stretch;
+  }
+  .contact-float span {
+    display: inline;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contact-float,
+  .contact-float a {
+    transition: none;
+  }
+}

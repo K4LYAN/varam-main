@@ -119,7 +119,7 @@
     $('[data-q="1"]').disabled = qty >= Math.min(50, variant.stockQty || 1);
     $$("[data-size]").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.size) === variant.id)));
     const text = `Hello Varam! I'd like to ask about ${product.name} (${variant.sizeLabel}, ${inr(variant.price)}).`;
-    $("#wa-enquire").href = `https://wa.me/${s.whatsappNumber || "917799228444"}?text=${encodeURIComponent(text)}`;
+    $("#wa-enquire").href = `https://wa.me/${s.whatsappNumber || "919515718720"}?text=${encodeURIComponent(text)}`;
     renderSticky();
   }
 

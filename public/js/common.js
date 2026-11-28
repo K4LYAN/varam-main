@@ -403,12 +403,16 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
   function telHref(p) {
     return "tel:+91" + String(p || "").replace(/\D/g, "").slice(-10);
   }
+  /** WhatsApp chat link. settings.whatsappNumber is the WhatsApp line; storePhone is for calls. */
+  function waHref(s, text) {
+    return `https://wa.me/${String(s.whatsappNumber || "").replace(/\D/g, "")}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+  }
 
   function utilityTrack(s, copy) {
     const items = [
       `<span>${I.pin}${esc(s.storeAddress)}</span>`,
-      `<a href="${telHref(s.storePhone)}"${copy ? ' tabindex="-1"' : ""}>${I.phone}${esc(s.storePhone)}</a>`,
-      s.storePhone2 ? `<a href="${telHref(s.storePhone2)}"${copy ? ' tabindex="-1"' : ""}>${I.phone}${esc(s.storePhone2)}</a>` : "",
+      `<a href="${telHref(s.storePhone)}"${copy ? ' tabindex="-1"' : ""}>${I.phone}Call ${esc(s.storePhone)}</a>`,
+      s.whatsappNumber ? `<a href="${waHref(s)}" target="_blank" rel="noopener"${copy ? ' tabindex="-1"' : ""}>${I.wa}WhatsApp ${esc(s.whatsappPhone || "+" + s.whatsappNumber)}</a>` : "",
       s.emails?.primary ? `<a href="mailto:${esc(s.emails.primary)}"${copy ? ' tabindex="-1"' : ""}>${I.mail}${esc(s.emails.primary)}</a>` : "",
       s.storeHours ? `<span>${I.clock}${esc(s.storeHours)}</span>` : "",
       `<span>${I.globe}We ship across India &amp; worldwide</span>`,
@@ -523,14 +527,17 @@ ${size ? `<text x="120" y="386" text-anchor="middle" font-family="Inter, sans-se
           s.instagramUrl ? `<li><a href="${esc(s.instagramUrl)}" target="_blank" rel="noopener">Instagram</a></li>` : ""
         }</ul></div>
         <div class="f-contact"><h4>Contact</h4><ul class="footer-contact">
-          <li>${I.phone}<a href="${telHref(s.storePhone)}">${esc(s.storePhone)}</a></li>
-          ${s.storePhone2 ? `<li>${I.phone}<a href="${telHref(s.storePhone2)}">${esc(s.storePhone2)}</a></li>` : ""}
+          <li>${I.phone}<a href="${telHref(s.storePhone)}">Call ${esc(s.storePhone)}</a></li>
+          ${s.whatsappNumber ? `<li>${I.wa}<a href="${waHref(s)}" target="_blank" rel="noopener">WhatsApp ${esc(s.whatsappPhone || "+" + s.whatsappNumber)}</a></li>` : ""}
           ${s.emails?.primary ? `<li>${I.mail}<a href="mailto:${esc(s.emails.primary)}">${esc(s.emails.primary)}</a></li>` : ""}
           <li>${I.pin}<span>BRTS Rd, Vijayawada</span></li></ul></div>
       </div>
       <div class="legal"><span>© ${new Date().getFullYear()} Varam&#39;s · Varam Organic Oil, Vijayawada</span><span>Shipping across India &amp; worldwide</span></div>
     </div></footer>
-    <a class="wa-float" href="https://wa.me/${esc(s.whatsappNumber)}?text=${encodeURIComponent("Hello Varam! I'd like to know more about your oils.")}" target="_blank" rel="noopener" aria-label="Chat with Varam on WhatsApp">${I.wa}</a>`;
+    <div class="contact-float">
+      <a class="call-float" href="${telHref(s.storePhone)}" aria-label="Call Varam on ${esc(s.storePhone)}">${I.phone}<span>Call</span></a>
+      <a class="wa-float" href="${waHref(s, "Hello Varam! I'd like to know more about your oils.")}" target="_blank" rel="noopener" aria-label="Chat with Varam on WhatsApp, ${esc(s.whatsappPhone || "")}">${I.wa}<span>WhatsApp</span></a>
+    </div>`;
   }
 
   /* ---------------- Cart drawer & checkout ---------------- */

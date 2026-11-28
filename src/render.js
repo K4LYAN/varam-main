@@ -87,7 +87,7 @@ function productBlock(p, s) {
         <dl>
           <dt>Pack sizes</dt><dd>${p.variants.map((v) => `${esc(v.sizeLabel)} — ${inr(v.price)}`).join("; ")}</dd>
           <dt>Process</dt><dd>${isOil ? "Cold-pressed in a traditional wooden ghani (gaanuga), naturally settled and filtered — unrefined, no chemicals." : "Traditionally prepared, filtered and packed."}</dd>
-          <dt>Order</dt><dd>Add to cart and send the order on WhatsApp (${esc(s.storePhone || "")}), or email ${esc(s.emails?.primary || "")}.</dd>
+          <dt>Order</dt><dd>Add to cart and send the order on WhatsApp (${esc(s.whatsappPhone || "+91 95157 18720")}), call ${esc(s.storePhone || "077992 28444")}, or email ${esc(s.emails?.primary || "")}.</dd>
         </dl>
         ${p.labelFull ? `<figure><img src="${esc(p.labelFull)}" alt="Printed label of Varam's ${esc(p.name)}: nutrition facts, benefits, FSSAI licence and outlets" width="1600" height="320" loading="lazy"><figcaption>Full label: nutrition facts and benefits</figcaption></figure>` : ""}
       </div>
@@ -167,13 +167,14 @@ function llmsTxt() {
 ${lines.join("\n")}
 
 ## Ordering
-- Shop: ${SITE}/shop.html — add to cart, then send the order on WhatsApp (+${s.whatsappNumber || "917799228444"}).
+- Shop: ${SITE}/shop.html — add to cart, then send the order on WhatsApp (+${s.whatsappNumber || "919515718720"}).
 - Delivery across India (free above ${inr(s.freeDeliveryThreshold)}, otherwise ${inr(s.deliveryFee)}); free pickup at the store; international shipping quoted by email.
 - Payment: UPI in India, pay at the store for pickups, payment link for orders from other countries.
 
 ## Contact
 - Store: ${s.storeAddress || "BRTS Rd, Vijayawada"} (${s.storeHours || ""})
-- Phone / WhatsApp: ${s.storePhone || ""}${s.storePhone2 ? `, ${s.storePhone2}` : ""}
+- Call: ${s.storePhone || "077992 28444"}
+- WhatsApp: ${s.whatsappPhone || "+91 95157 18720"} (https://wa.me/${s.whatsappNumber || "919515718720"})
 - Email: ${[s.emails?.primary, s.emails?.info, s.emails?.support].filter(Boolean).join(", ")}
 
 ## More
@@ -296,7 +297,7 @@ ${productImages(p).map((src, i) => `- ${i ? "Full label (nutrition facts)" : "La
 ${p.description || p.tagline}
 
 ## How to order
-Add to cart on ${productUrl(p)} and send the order on WhatsApp (+${s.whatsappNumber || "917799228444"}), or email ${s.emails?.primary || "varam@varams.in"}. Free delivery in India above ${inr(s.freeDeliveryThreshold)}, otherwise ${inr(s.deliveryFee)}; free pickup at the Vijayawada store; international orders quoted by email.
+Add to cart on ${productUrl(p)} and send the order on WhatsApp (+${s.whatsappNumber || "919515718720"}), call ${s.storePhone || "077992 28444"}, or email ${s.emails?.primary || "varam@varams.in"}. Free delivery in India above ${inr(s.freeDeliveryThreshold)}, otherwise ${inr(s.deliveryFee)}; free pickup at the Vijayawada store; international orders quoted by email.
 `;
 }
 
